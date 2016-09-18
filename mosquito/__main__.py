@@ -346,7 +346,7 @@ class Mosquito(object):
 
         self.db.create('True', plugin , source, destination_list, 
                         update_interval, description, regexp_list, 
-                        regexp_action_list, time.mktime(datetime.utcnow().timetuple()))
+                        regexp_action_list, '0')
 
     def delete(self, args):
         if self._check_confirmation('Please, confirm the deletion'):
