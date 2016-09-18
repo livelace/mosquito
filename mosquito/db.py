@@ -8,7 +8,6 @@ import logging
 import sys
 import sqlite3
 
-
 class MosquitoDB(object):
     
     def _sql(self, request):
