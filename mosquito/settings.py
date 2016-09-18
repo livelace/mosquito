@@ -3,18 +3,17 @@
 
 """ Settings module. Supports ~/.mosquito.ini """
 
-import coloredlogs
 import logging
 import os
 import sys
 import ConfigParser
 
+
 class MosquitoSettings(object):
     
     def __init__(self):
         # Set logger
-        coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
-        coloredlogs.install(level=self.settings.verbose)
+        logging.basicConfig()
         self.logger = logging.getLogger('[SETTINGS]')
         
         # Try to find the configuration file
