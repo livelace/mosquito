@@ -425,7 +425,8 @@ class Mosquito(object):
                         else:
                             self.logger.info('Update interval has not been reached for the configuration: {} -> {}'.format(plugin, source))
                     else:
-                        self.logger.info('Configuration is disabled: {} -> {}'.format(plugin, source))             
+                        self.logger.info('Configuration is disabled: {} -> {}'.format(plugin, source)) 
+                                    
     def list(self, args):
         table = [[
                   'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 
@@ -488,7 +489,7 @@ class Mosquito(object):
                                           help='space separated list of email addresses')
         parser_create.add_argument('--update-interval', default='0',
                                           help='update interval e.g. 1s, 2m, 3h, 4d')
-        parser_create.add_argument('--description', nargs='+',
+        parser_create.add_argument('--description', nargs='+', type=lambda s: unicode(s, 'utf8'),
                                           help='description text')
         parser_create.add_argument('--regexp', nargs='+', type=lambda s: unicode(s, 'utf8'), 
                                           help='see documentation')
