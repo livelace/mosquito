@@ -1,3 +1,4 @@
+coloredlogs>=5.0
 feedparser>=5.2.1
 html2text>=2016.5.29
 python-twitter>=3.1
