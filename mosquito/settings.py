@@ -13,12 +13,8 @@ class MosquitoSettings(object):
     
     def __init__(self):
         # Set logger
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger('[SETTINGS]')
         
-        # Statuses of plugins
-        self.twitter = False
-        self.facebook = False
-                
         # Try to find the configuration file
         inifile = os.path.join(os.environ['HOME'], '.mosquito.ini')
         
@@ -52,8 +48,6 @@ class MosquitoSettings(object):
             self.smtp_password = settings.get('main', 'smtp_password')
             self.verbose = settings.get('main', 'verbose')
             
-            
-            
             # Try to obtain Twitter settings
             if settings.has_section('twitter'):
                 try:
@@ -62,14 +56,6 @@ class MosquitoSettings(object):
                     self.twitter_access_token_key = settings.get('twitter', 'access_token_key')
                     self.twitter_access_token_secret = settings.get('twitter', 'access_token_secret')
                     self.twitter = True
-                except:
-                    pass
-                
-            # Try to obtain Facebook settings
-            if settings.has_section('facebook'):
-                try:
-                    self.facebook_access_token = settings.get('facebook', 'access_token')
-                    self.facebook = True
                 except:
                     pass
 
