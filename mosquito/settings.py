@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""" Settings module. Supports .mosquito.ini """
+""" Settings module. Supports ~/.mosquito.ini """
 
 import logging
 import os
@@ -13,6 +13,7 @@ class MosquitoSettings(object):
     
     def __init__(self):
         # Set logger
+        logging.basicConfig()
         self.logger = logging.getLogger('[SETTINGS]')
         
         # Try to find the configuration file
