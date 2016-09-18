@@ -24,7 +24,7 @@ class MosquitoSettings(object):
             sys.exit(1)        
         
         settings = ConfigParser.RawConfigParser({
-                                               'grab_timeout': 30,
+                                               'grab_timeout': 60,
                                                'smtp_server': 'localhost',
                                                'smtp_port': 25,
                                                'smtp_usessl': 'False',

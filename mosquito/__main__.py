@@ -9,6 +9,7 @@ import logging
 import coloredlogs
 import os
 import re
+import requests
 import sys
 import subprocess
 import time
@@ -85,101 +86,12 @@ class Mosquito(object):
         return value
     
     def _check_confirmation(self, question):
-        sys.stdout.write('%s [y/n] ' % question)
+        sys.stdout.write('%s [y/n]: ' % question)
         while True:
             try:
                 return strtobool(raw_input().lower())
             except ValueError:
                 sys.stdout.write('Please respond with \'y\' or \'n\'.\n')
-    
-    def _handle_content(self, source_id, original_content, expanded_url):
-        config_data = self.db.list('all', source_id)
-        plugin = config_data[0][2]
-        source = config_data[0][3]
-        destination = ast.literal_eval(config_data[0][4])
-        regexp_action_list = ast.literal_eval(config_data[0][8])
-        operation_timestamp = time.mktime(datetime.utcnow().timetuple())
-        
-        self.logger.debug('Trying to process data')
-            
-        execute = None
-        grab = None
-        header = None
-        priority = None
-        subject = None
-        expanded_text_content = None
-        expanded_image_content = None
-
-        # Check actions which were set for configuration
-        for action in regexp_action_list:
-            action_name = action.split('=')[0]
-            action_value = action.split('=')[1]
-                            
-            if action_name == 'execute':
-                execute = action_value
-            elif action_name == 'grab':
-                grab = action_value
-            elif action_name == 'header':
-                header = action_value
-            elif action_name == 'priority':
-                priority = action_value
-            elif action_name == 'subject':
-                subject = action_value
-                
-        # Change priority
-        if priority:                
-            if priority == 'high':
-                priority = '1'
-            elif priority == 'normal':
-                priority = '3'
-            elif priority == 'low':
-                priority = '5'
-                
-        # Change subject
-        if subject:
-            subject = subject + ' ' + original_content.split('\n', 1)[0]
-        else:
-            subject = original_content.split('\n', 1)[0]
-            
-        if subject and len(subject) > 100:
-            subject = subject[:100] + ' ...'
-                                              
-        # Add service data
-        original_content = original_content + '\n\n---\nPlugin: {}\nSource: {}\nExpanded url: {}'.format(plugin, source, expanded_url)
-                                              
-        # Grab a remote content
-        if grab == 'text' and expanded_url:
-            expanded_text_content = self._grab(expanded_url, grab)
-        elif grab == 'screenshot' and expanded_url:
-            expanded_image_content = self._grab(expanded_url, grab)
-        elif grab == 'full' and expanded_url:
-            expanded_text_content = self._grab(expanded_url, 'text')
-            expanded_image_content = self._grab(expanded_url, 'image')
-                                                
-        # Execute script
-        if execute:
-            self._execute(execute, original_content, expanded_text_content, expanded_image_content)
-                                        
-        # If a mail server is alive we:
-        # 1. We will try send archived data
-        # 2. If a mail server goes down in the middle of operation we just have to save data to archive
-        if self.mail.active:       
-            if not self.mail.send(destination, header, priority, subject, 
-                                  original_content, expanded_text_content, 
-                                  expanded_image_content):
-                self.db.add_archive(
-                                    source_id, destination, header, priority, 
-                                    subject, original_content, 
-                                    expanded_text_content, expanded_image_content, 
-                                    operation_timestamp
-                                    )                                                                       
-        else:                      
-            self.db.add_archive(
-                                source_id, destination, header, priority, 
-                                subject, original_content,
-                                expanded_text_content, expanded_image_content,
-                                operation_timestamp
-                                )
         
     def _check_description(self, value):
         if value:
@@ -287,18 +199,105 @@ class Mosquito(object):
                 driver.set_page_load_timeout(self.settings.grab_timeout)
                 driver.get(expanded_url)
                 return driver.get_screenshot_as_png()
-            except:
-                self.logger.warning('Cannot grab image from the URL: {}'.format(expanded_url))
+            except Exception as warning:
+                self.logger.warning('Cannot grab image from the URL: {} -> {}'.format(expanded_url, warning))
         elif grab == 'text':
             try:
-                driver = webdriver.PhantomJS()
-                driver.set_page_load_timeout(self.settings.grab_timeout)
-                driver.get(expanded_url)
+                page = requests.get(expanded_url)
                 h2t = HTML2Text()
                 h2t.ignore_links = True
-                return h2t.handle(driver.page_source)
-            except:
-                self.logger.warning('Cannot grab text from the URL: {}'.format(expanded_url))
+                return h2t.handle(page.content.decode('utf-8'))
+            except Exception as warning:
+                self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))
+                
+    def _handle_content(self, source_id, original_content, expanded_url):
+        config_data = self.db.list('all', source_id)
+        plugin = config_data[0][2]
+        source = config_data[0][3]
+        destination = ast.literal_eval(config_data[0][4])
+        regexp_action_list = ast.literal_eval(config_data[0][8])
+        operation_timestamp = time.mktime(datetime.utcnow().timetuple())
+        
+        self.logger.debug('Trying to process data')
+            
+        execute = None
+        grab = None
+        header = None
+        priority = None
+        subject = None
+        expanded_text_content = None
+        expanded_image_content = None
+
+        # Check actions which were set for configuration
+        for action in regexp_action_list:
+            action_name = action.split('=')[0]
+            action_value = action.split('=')[1]
+                            
+            if action_name == 'execute':
+                execute = action_value
+            elif action_name == 'grab':
+                grab = action_value
+            elif action_name == 'header':
+                header = action_value
+            elif action_name == 'priority':
+                priority = action_value
+            elif action_name == 'subject':
+                subject = action_value
+                
+        # Change priority
+        if priority:                
+            if priority == 'high':
+                priority = '1'
+            elif priority == 'normal':
+                priority = '3'
+            elif priority == 'low':
+                priority = '5'
+                
+        # Change subject
+        if subject:
+            subject = subject + ' ' + original_content.split('\n', 1)[0]
+        else:
+            subject = original_content.split('\n', 1)[0]
+            
+        if subject and len(subject) > 100:
+            subject = subject[:100] + ' ...'
+                                              
+        # Add service data
+        original_content = original_content + '\n\n---\nPlugin: {}\nSource: {}\nExpanded url: {}'.format(plugin, source, expanded_url)
+                                              
+        # Grab a remote content
+        if grab == 'text' and expanded_url:
+            expanded_text_content = self._grab(expanded_url, grab)
+        elif grab == 'screenshot' and expanded_url:
+            expanded_image_content = self._grab(expanded_url, grab)
+        elif grab == 'full' and expanded_url:
+            expanded_text_content = self._grab(expanded_url, 'text')
+            expanded_image_content = self._grab(expanded_url, 'image')
+                                                
+        # Execute script
+        if execute:
+            self._execute(execute, original_content, expanded_text_content, expanded_image_content)
+                                        
+        # If a mail server is alive we:
+        # 1. We will try send archived data
+        # 2. If a mail server goes down in the middle of operation we just have to save data to archive
+        if self.mail.active:       
+            if not self.mail.send(destination, header, priority, subject, 
+                                  original_content, expanded_text_content, 
+                                  expanded_image_content):
+                self.db.add_archive(
+                                    source_id, destination, header, priority, 
+                                    subject, original_content, 
+                                    expanded_text_content, expanded_image_content, 
+                                    operation_timestamp
+                                    )                                                                       
+        else:                      
+            self.db.add_archive(
+                                source_id, destination, header, priority, 
+                                subject, original_content,
+                                expanded_text_content, expanded_image_content,
+                                operation_timestamp
+                                )
                 
     def _human_time(self, seconds):   
         m, s = divmod(seconds, 60)
