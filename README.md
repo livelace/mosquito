@@ -6,6 +6,7 @@
 ### Main features:
 
 * Support as data source: RSS, Twitter.
+* Support for a capture of text and image from the page.
 * Support regexp (case insensitive) for content filtering.
 * Support regexp actions (if regexp was found) for content processing.
 * Support for offline mode. Save data to database if a SMTP server is not reachable.
