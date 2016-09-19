@@ -1,10 +1,9 @@
 
 # mosquito
 
-*mosquito* is a news aggregator which supports various of data sources like RSS, Twitter and so on. It fetches data from news source and sends this data to email.
+*mosquito* is a news aggregator which supports various of data sources like RSS, Twitter and so on. It fetches data from news source and sends this data to email.  
 
-
-Main features:
+### Main features:
 
 * Support as data source: RSS, Twitter.
 * Support regexp for content filtering.
@@ -13,10 +12,25 @@ Main features:
 ### Available actions:
 
 * execute - execute a script with parameters
-* grab - grab the source data (text, image, both)
+  e.g. exectute=/path/to/script.sh
+  $1 - path to file with original content
+  $2 - path to file with expanded text content
+  $3 - path to file with expanded image content
+  
+* grab - grab the source of data
+  e.g. grab=full|image|text
+  full - grab image and text
+  image - grab only image
+  text - grab only text
+  
 * header - add a custom header into an email
+  e.g header=X-foo:bar
+  
 * prority - set priority for an email
+  e.g. priority=high|normal|low
+
 * subject - add a custom string to the email subject
+  e.g. subject=HelloWorld: 
 
 Some examples:
 
