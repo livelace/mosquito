@@ -12,12 +12,14 @@
 ### Available actions:
 
 * execute - execute a script with parameters  
+    
   e.g. exectute=/path/to/script.sh  
   $1 - path to file with original content  
   $2 - path to file with expanded text content  
   $3 - path to file with expanded image content
   
 * grab - grab the source of data  
+    
   e.g. grab=full|image|text  
   full - grab image and text  
   image - grab only image  
