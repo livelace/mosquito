@@ -6,9 +6,10 @@
 ### Main features:
 
 * Support as data source: RSS, Twitter.
-* Support regexp for content filtering.
+* Support regexp (case insensitive) for content filtering.
 * Support regexp actions for content processing.
 * Support for offline mode. Save data to database if a SMTP server is not reachable.
+* Support individual an update interval for configurations.
 
 ### Available actions:
 
