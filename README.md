@@ -47,16 +47,6 @@
     
   base subject assembled from first 100 characters of an original content
 
-Some examples:
-
-```
-mosquito create --plugin twitter --source rianru --destination user@example.com --update-interval 1m --description 'РИА Новости' --regexp '.*' --regexp-action execute=/path/to/script.sh subject=Twitter: 
-```
-
-```
-mosquito create --plugin rss --source http://feeds.dzone.com/home --destination user@example.com --update-interval 1d --description 'DZone feeds' --regexp 'javascript' --regexp-action grab=text header=X-mosquito:dzone 
-```
-
 ### Example of configuration file:
 
 ```
@@ -80,5 +70,53 @@ consumer_key = <CONSUMER_KEY>
 consumer_secret = <CONSUMER_SECRET>
 access_token_key = <ACCESS_KEY>
 access_token_secret = <ACCESS_SECRET>
+```
+
+### Some examples:
+
+
+Create Twitter configuration:
+```
+mosquito create --plugin twitter --source rianru --destination user@example.com --update-interval 1m --description 'РИА Новости' --regexp '.*' --regexp-action execute=/path/to/script.sh subject=Twitter: 
+```
+
+Create RSS configuration:
+```
+mosquito create --plugin rss --source http://feeds.dzone.com/home --destination user@example.com --update-interval 1d --description 'DZone feeds' --regexp 'javascript' --regexp-action grab=text header=X-mosquito:dzone 
+```
+
+Delete all Twitter configurations:
+```
+mosquito delete --plugin twitter
+```
+
+Delete specific configuration:
+```
+mosquito delete --id 1
+```
+
+Disable all RSS configurations:
+```
+mosquito disable --plugin rss
+```
+
+Disable specific configuration:
+```
+mosquito disable --id 1
+```
+
+### Output examples:
+
+List configurations:
 
 ```
++----+---------+---------+--------+---------------------+-----------------+-------------+--------+--------------------------+---------------------+
+| ID | Enabled | Plugin  | Source | Destination         | Update interval | Description | Regexp | Regexp action            | Last update         |
++----+---------+---------+--------+---------------------+-----------------+-------------+--------+--------------------------+---------------------+
+| 1  |   True  | twitter | rianru | o.popov@livelace.ru |       1s        | grab        |   .*   | grab=full                | 2016-09-16 12:27:37 |
+|    |         |         |        |                     |                 |             |        | subject=Twitter          |                     |
+|    |         |         |        |                     |                 |             |        | priority=high            |                     |
+|    |         |         |        |                     |                 |             |        | header=X-mosquito:rianru |                     |
++----+---------+---------+--------+---------------------+-----------------+-------------+--------+--------------------------+---------------------+
+```
+
