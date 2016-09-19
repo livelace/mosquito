@@ -11,25 +11,25 @@
 
 ### Available actions:
 
-* execute - execute a script with parameters
-  e.g. exectute=/path/to/script.sh
-  $1 - path to file with original content
-  $2 - path to file with expanded text content
+* execute - execute a script with parameters  
+  e.g. exectute=/path/to/script.sh  
+  $1 - path to file with original content  
+  $2 - path to file with expanded text content  
   $3 - path to file with expanded image content
   
-* grab - grab the source of data
-  e.g. grab=full|image|text
-  full - grab image and text
-  image - grab only image
+* grab - grab the source of data  
+  e.g. grab=full|image|text  
+  full - grab image and text  
+  image - grab only image  
   text - grab only text
   
-* header - add a custom header into an email
+* header - add a custom header into an email  
   e.g header=X-foo:bar
   
-* prority - set priority for an email
+* prority - set priority for an email  
   e.g. priority=high|normal|low
 
-* subject - add a custom string to the email subject
+* subject - add a custom string to the email subject  
   e.g. subject=HelloWorld: 
 
 Some examples:
