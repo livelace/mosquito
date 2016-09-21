@@ -222,23 +222,25 @@ class Mosquito(object):
             
         execute = None
         grab = None
-        header = None
         priority = None
         subject = None
         expanded_text_content = None
         expanded_image_content = None
 
+        # Multiple headers support
+        header_list = []
+
         # Check actions which were set for configuration
         for action in regexp_action_list:
             action_name = action.split('=')[0]
             action_value = action.split('=')[1]
-                            
+                                
             if action_name == 'execute':
                 execute = action_value
             elif action_name == 'grab':
                 grab = action_value
             elif action_name == 'header':
-                header = action_value
+                header_list.append(action_value)
             elif action_name == 'priority':
                 priority = action_value
             elif action_name == 'subject':
@@ -259,8 +261,8 @@ class Mosquito(object):
         else:
             subject = original_content.split('\n', 1)[0]
             
-        if subject and len(subject) > 100:
-            subject = subject[:100] + ' ...'
+        if subject and len(subject) > 60:
+            subject = subject[:60] + ' ...'
                                               
         # Add service data
         original_content = original_content + '\n\n---\nPlugin: {}\nSource: {}\nExpanded url: {}'.format(plugin, source, expanded_url)
@@ -282,18 +284,18 @@ class Mosquito(object):
         # 1. We will try send archived data
         # 2. If a mail server goes down in the middle of operation we just have to save data to archive
         if self.mail.active:       
-            if not self.mail.send(destination, header, priority, subject, 
+            if not self.mail.send(destination, header_list, priority, subject, 
                                   original_content, expanded_text_content, 
                                   expanded_image_content):
                 self.db.add_archive(
-                                    source_id, destination, header, priority, 
+                                    source_id, destination, header_list, priority, 
                                     subject, original_content, 
                                     expanded_text_content, expanded_image_content, 
                                     operation_timestamp
                                     )                                                                       
         else:                      
             self.db.add_archive(
-                                source_id, destination, header, priority, 
+                                source_id, destination, header_list, priority, 
                                 subject, original_content,
                                 expanded_text_content, expanded_image_content,
                                 operation_timestamp
@@ -318,14 +320,14 @@ class Mosquito(object):
 
         for archive in archive_list:
             destination_list = ast.literal_eval(archive[2])
-            header = archive[3]
+            header_list = archive[3]
             priority = archive[4]
             subject = archive[5]
             original_content = archive[6]
             expanded_text_content = archive[7]
             expanded_image_content = archive[8]
                 
-            if self.mail.send(destination_list, header, priority, subject, 
+            if self.mail.send(destination_list, header_list, priority, subject, 
                               original_content, expanded_text_content, 
                               expanded_image_content):
                 
@@ -536,7 +538,7 @@ class Mosquito(object):
                                           help='a space separated list of IDs')
         parser_list.set_defaults(func=self.list)        
         
-        results = parser.parse_args()
+        results = parser.parse_args('fetch --id 2'.split())
         results.func(results)
 
 def main():

@@ -44,7 +44,7 @@ class MosquitoMail(object):
             except Exception:
                 self.logger.warning('Cannot authenticate on SMTP server: {}:{}'.format(self.settings.smtp_server, self.settings.smtp_port))
                 
-    def send(self, destination_list, header, priority, subject, original_content, expanded_text_content, expanded_image_content):
+    def send(self, destination_list, header_list, priority, subject, original_content, expanded_text_content, expanded_image_content):
         for email in destination_list:       
             try:
                 msg = MIMEMultipart()
@@ -54,8 +54,9 @@ class MosquitoMail(object):
                 msg['To'] = email
 
                 # Set a custom header
-                if header:
-                    msg.add_header(header.split(':')[0], header.split(':')[1])
+                if header_list:
+                    for header in header_list:
+                        msg.add_header(header.split(':')[0], header.split(':')[1])
                       
                 # Set a priority
                 if priority:
