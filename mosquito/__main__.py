@@ -538,7 +538,7 @@ class Mosquito(object):
                                           help='a space separated list of IDs')
         parser_list.set_defaults(func=self.list)        
         
-        results = parser.parse_args('fetch --id 2'.split())
+        results = parser.parse_args()
         results.func(results)
 
 def main():
