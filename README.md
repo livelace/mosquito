@@ -37,7 +37,7 @@
     
   e.g header=X-foo:bar
     
-  only one header at the moment
+  multiple headers are supported
   
 * **prority** - set priority for an email  
     
