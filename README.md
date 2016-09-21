@@ -47,7 +47,7 @@
     
   e.g. subject=HelloWorld: 
     
-  base subject assembled from first 100 characters of an original content
+  base subject assembled from first 60 characters of an original content
 
 ### Example of configuration file:
 
