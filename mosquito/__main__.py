@@ -162,7 +162,10 @@ class Mosquito(object):
 
         if new_coding.upper() != encoding.upper():
             data = data.decode(encoding, data)
+        else:
+            data = data.decode(new_coding)
 
+        self.logger.debug('Detected encoding: {}'.format(encoding))
         return data
  
     def _execute(self, execute, original_content, expanded_text_content, expanded_image_content):
