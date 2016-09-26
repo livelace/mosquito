@@ -354,6 +354,10 @@ class Mosquito(object):
         regexp_list = args.regexp
         regexp_action_list = args.regexp_action
 
+        if not destination_list:
+            self.logger.error('Destination is required')
+            sys.exit(1)
+
         for action in regexp_action_list:
             self._check_action(action)
 
@@ -498,7 +502,7 @@ class Mosquito(object):
                                           help='a plugin name e.g. rss, twitter')
         parser_create.add_argument('--source', required=True, 
                                           help='see documentation')
-        parser_create.add_argument('--destination', nargs='+', required=True,
+        parser_create.add_argument('--destination', nargs='+', default=self.settings.destination, 
                                           help='space separated list of email addresses')
         parser_create.add_argument('--update-interval', default=self.settings.update_interval,
                                           help='update interval e.g. 1s, 2m, 3h, 4d')

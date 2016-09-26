@@ -24,6 +24,7 @@ class MosquitoSettings(object):
             sys.exit(1)        
         
         settings = ConfigParser.RawConfigParser({
+                                               'destination': None,
                                                'grab_timeout': 60,
                                                'smtp_server': 'localhost',
                                                'smtp_port': 25,
@@ -40,6 +41,11 @@ class MosquitoSettings(object):
         try:
             settings.read(inifile)
             
+            self.destination = settings.get('main', 'destination')
+            if self.destination:
+                self.destination = self.destination.split(',')
+                self.destination = [x.strip(' ') for x in self.destination]
+                
             self.grab_timeout = settings.get('main', 'grab_timeout')
             self.smtp_server = settings.get('main', 'smtp_server')
             self.smtp_port = settings.get('main', 'smtp_port')

@@ -54,6 +54,9 @@
 ```
 [main]
 
+# Destination by default
+destination = user1@example.com, user2@example.com
+
 grab_timeout = 60
 
 smtp_server = mail.example.com
@@ -66,6 +69,8 @@ smtp_password = Passw0rD
 
 # Update interval by default
 update_interval = 15m
+
+# Verbosity level
 verbose = info
 
 [twitter]
