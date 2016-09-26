@@ -1,4 +1,5 @@
 # tested with phantomjs-2.1.1
+chardet>=2.3.0
 coloredlogs>=5.0
 feedparser>=5.2.1
 html2text>=2016.5.29
