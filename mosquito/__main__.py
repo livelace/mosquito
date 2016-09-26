@@ -5,6 +5,7 @@
 
 import argparse
 import ast
+import chardet
 import logging
 import coloredlogs
 import os
@@ -156,6 +157,14 @@ class Mosquito(object):
             self.logger.debug('Regexp list is empty: {}'.format(regexp))
             return False
  
+    def _convert_encoding(self, data, new_coding = 'UTF-8'):
+        encoding = chardet.detect(data)['encoding']
+
+        if new_coding.upper() != encoding.upper():
+            data = data.decode(encoding, data)
+
+        return data
+ 
     def _execute(self, execute, original_content, expanded_text_content, expanded_image_content):
 
         def delete(filename):
@@ -206,7 +215,7 @@ class Mosquito(object):
                 page = requests.get(expanded_url)
                 h2t = HTML2Text()
                 h2t.ignore_links = True
-                return h2t.handle(page.content.decode('utf-8'))
+                return h2t.handle(self._convert_encoding(page.content))
             except Exception as warning:
                 self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))
                 
@@ -538,7 +547,7 @@ class Mosquito(object):
                                           help='a space separated list of IDs')
         parser_list.set_defaults(func=self.list)        
         
-        results = parser.parse_args()
+        results = parser.parse_args('fetch --id 1'.split())
         results.func(results)
 
 def main():
