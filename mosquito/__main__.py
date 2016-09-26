@@ -500,7 +500,7 @@ class Mosquito(object):
                                           help='see documentation')
         parser_create.add_argument('--destination', nargs='+', required=True,
                                           help='space separated list of email addresses')
-        parser_create.add_argument('--update-interval', default='0',
+        parser_create.add_argument('--update-interval', default=self.settings.update_interval,
                                           help='update interval e.g. 1s, 2m, 3h, 4d')
         parser_create.add_argument('--description', nargs='+', type=lambda s: unicode(s, 'utf8'),
                                           help='description text')

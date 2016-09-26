@@ -64,6 +64,8 @@ smtp_from = mosquito@example.com
 smtp_username = user@example.com
 smtp_password = Passw0rD
 
+# Update interval by default
+update_interval = 15m
 verbose = info
 
 [twitter]

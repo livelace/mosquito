@@ -32,6 +32,7 @@ class MosquitoSettings(object):
                                                'smtp_from': None,
                                                'smtp_username': None,
                                                'smtp_password': None,
+                                               'update_interval': '15m',
                                                'verbose': 'info'
                                                })
         
@@ -47,6 +48,7 @@ class MosquitoSettings(object):
             self.smtp_from = settings.get('main', 'smtp_from')
             self.smtp_username = settings.get('main', 'smtp_username')
             self.smtp_password = settings.get('main', 'smtp_password')
+            self.update_interval = settings.get('main', 'update_interval')
             self.verbose = settings.get('main', 'verbose')
             
             # Try to obtain Twitter settings
