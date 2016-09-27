@@ -215,9 +215,11 @@ class Mosquito(object):
                 self.logger.warning('Cannot grab image from the URL: {} -> {}'.format(expanded_url, warning))
         elif grab == 'text':
             try:
+                # Omit HTTP requests 
                 self.logger.setLevel('ERROR')
                 page = requests.get(expanded_url, timeout=float(self.settings.grab_timeout))
                 self.logger.setLevel(self.settings.logger)
+                
                 h2t = HTML2Text()
                 h2t.ignore_links = True
                 return h2t.handle(self._convert_encoding(page.content))
