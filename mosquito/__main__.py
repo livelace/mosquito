@@ -385,8 +385,6 @@ class Mosquito(object):
                     self.db.switch_config(plugin, id, 'True')        
             
     def fetch(self, args):
-        print args.force
-        sys.exit(1)
         for plugin in args.plugin:
             for id in args.id:
                 config_data = self.db.list(plugin, id)
