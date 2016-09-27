@@ -273,8 +273,8 @@ class Mosquito(object):
         else:
             subject = original_content.split('\n', 1)[0]
             
-        if subject and len(subject) > 60:
-            subject = subject[:60] + ' ...'
+        if subject and len(subject) > self.settings.subject_length:
+            subject = subject[:self.settings.subject_length] + ' ...'
                                               
         # Add service data
         original_content = original_content + '\n\n---\nPlugin: {}\nSource: {}\nExpanded url: {}'.format(plugin, source, expanded_url)

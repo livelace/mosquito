@@ -47,7 +47,7 @@
     
   e.g. subject=HelloWorld: 
     
-  base subject assembled from first 60 characters of an original content
+  by default base subject assembled from first 100 characters of an original content
 
 ### Example of configuration file:
 
@@ -66,6 +66,8 @@ smtp_auth = true
 smtp_from = mosquito@example.com
 smtp_username = user@example.com
 smtp_password = Passw0rD
+
+subject_length = 100
 
 # Update interval by default
 update_interval = 15m

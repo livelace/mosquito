@@ -33,6 +33,7 @@ class MosquitoSettings(object):
                                                'smtp_from': None,
                                                'smtp_username': None,
                                                'smtp_password': None,
+                                               'subject_length': 100,
                                                'update_interval': '15m',
                                                'verbose': 'info'
                                                })
@@ -54,6 +55,7 @@ class MosquitoSettings(object):
             self.smtp_from = settings.get('main', 'smtp_from')
             self.smtp_username = settings.get('main', 'smtp_username')
             self.smtp_password = settings.get('main', 'smtp_password')
+            self.subject_length = settings.get('main', 'subject_length')
             self.update_interval = settings.get('main', 'update_interval')
             self.verbose = settings.get('main', 'verbose')
             
