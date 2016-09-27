@@ -416,7 +416,7 @@ class Mosquito(object):
                                      
                     # Check if we haven't received new data during specific interval
                     if current_timestamp > (config_timestamp + self._check_interval(self.settings.update_alert)):
-                        self.logger.debug('New data is not available: {} -> {} -> {}'.format(source_id, plugin, source))
+                        self.logger.info('New data is not available: {} -> {} -> {}'.format(source_id, plugin, source))
                         self.mail.send(destination_list, None, None, 'Alert', 'Alert message', None, None)
                                      
                     if args.force or config_enabled == 'True':
