@@ -385,6 +385,8 @@ class Mosquito(object):
                     self.db.switch_config(plugin, id, 'True')        
             
     def fetch(self, args):
+        print args.force
+        sys.exit(1)
         for plugin in args.plugin:
             for id in args.id:
                 config_data = self.db.list(plugin, id)
@@ -398,8 +400,8 @@ class Mosquito(object):
                     regexp_list = ast.literal_eval(data[7])
                     config_timestamp = data[9]
                                      
-                    if config_enabled == 'True':
-                        if time.mktime(datetime.utcnow().timetuple())-config_timestamp > update_interval:
+                    if config_enabled == 'True' or args.force:
+                        if time.mktime(datetime.utcnow().timetuple())-config_timestamp > update_interval or args.force:
                             self.logger.debug('Processing the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
                             
                             if plugin == 'rss':
@@ -550,6 +552,8 @@ class Mosquito(object):
                                           help='a space separated list of plugins')
         parser_fetch.add_argument('--id', nargs='+', default=['all'], 
                                           help='a space separated list of IDs')
+        parser_fetch.add_argument('--force', action='store_true', 
+                                          help='ignore update interval')
         parser_fetch.set_defaults(func=self.fetch)
         
         # Create 'list' parser
