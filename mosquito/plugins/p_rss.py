@@ -9,6 +9,9 @@ from datetime import datetime
 
 class MosquitoRSS(object):
     def __init__(self, url):
+        # Set logger
+        self.logger = logging.getLogger('[RSS]')
+        
         self.url = url
         
     def fetch(self):
@@ -23,7 +26,14 @@ class MosquitoRSS(object):
                 expanded_url = post.links[0]['href']
                 
             try:
+                timestamp = time.mktime(post.updated_parsed)
+                self.logger.debug('Date indication variable is: updated_parsed')
+            except:
+                timestamp = time.mktime(datetime.utcnow().timetuple())    
+                
+            try:
                 timestamp = time.mktime(post.published_parsed)
+                self.logger.debug('Date indication variable is: published_parsed')
             except:
                 timestamp = time.mktime(datetime.utcnow().timetuple())
                 
