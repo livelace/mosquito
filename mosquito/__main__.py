@@ -277,7 +277,7 @@ class Mosquito(object):
             subject = subject[:self.settings.subject_length] + ' ...'
                                               
         # Add service data
-        original_content = original_content + '\n\n---\nPlugin: {}\nSource: {}\nExpanded url: {}'.format(plugin, source, expanded_url)
+        original_content = original_content + '\n\n---\n{}'.format(expanded_url)
                                               
         # Grab a remote content
         if grab == 'text' and expanded_url:
