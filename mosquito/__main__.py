@@ -400,7 +400,7 @@ class Mosquito(object):
                                      
                     if config_enabled == 'True':
                         if time.mktime(datetime.utcnow().timetuple())-config_timestamp > update_interval:
-                            self.logger.debug('Processing the configuration: {} -> {}'.format(plugin, source))
+                            self.logger.debug('Processing the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
                             
                             if plugin == 'rss':
                                 self.rss = MosquitoRSS(source)
@@ -419,7 +419,7 @@ class Mosquito(object):
                                             self._handle_content(source_id, original_content, expanded_url)
                                             count += 1
                                             
-                                    self.logger.info('Data has been processed: {} -> {} -> {}'.format(plugin, source, count))
+                                    self.logger.info('Data has been processed: {} -> {} -> {} -> {}'.format(source_id, plugin, source, count))
 
                             elif plugin == 'twitter':
                                 self.twitter = MosquitoTwitter()
@@ -439,16 +439,16 @@ class Mosquito(object):
                                                 self._handle_content(source_id, original_content, expanded_url)
                                                 count += 1
                                                 
-                                        self.logger.info('Data has been processed: {} -> {} -> {}'.format(plugin, source, count))
+                                        self.logger.info('Data has been processed: {} -> {} -> {} -> {}'.format(source_id, plugin, source, count))
                                 else:
-                                    self.logger.warning('Cannot load the configuration because the plugin is not active: {} -> {}'.format(plugin, source))
+                                    self.logger.warning('Cannot load the configuration because the plugin is not active: {} -> {} -> {}'.format(source_id, plugin, source))
                             
                             # Update timestamp for the configuration
                             self.db.mark_config(source_id, time.mktime(datetime.utcnow().timetuple()))
                         else:
-                            self.logger.info('Update interval has not been reached for the configuration: {} -> {}'.format(plugin, source))
+                            self.logger.info('Update interval has not been reached for the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
                     else:
-                        self.logger.info('Configuration is disabled: {} -> {}'.format(plugin, source)) 
+                        self.logger.info('Configuration is disabled: {} -> {} -> {}'.format(source_id, plugin, source)) 
                                     
     def list(self, args):
         table = [[
