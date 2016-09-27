@@ -224,8 +224,6 @@ class Mosquito(object):
                 
     def _handle_content(self, source_id, original_content, expanded_url):
         config_data = self.db.list('all', source_id)
-        plugin = config_data[0][2]
-        source = config_data[0][3]
         destination = ast.literal_eval(config_data[0][4])
         regexp_action_list = ast.literal_eval(config_data[0][8])
         operation_timestamp = time.mktime(datetime.utcnow().timetuple())
@@ -385,6 +383,17 @@ class Mosquito(object):
                     self.db.switch_config(plugin, id, 'True')        
             
     def fetch(self, args):
+        
+        if os.path.exists(self.settings.lock_file):
+            self.logger.error('Mosquito already running. The lock file exist: {}'.format(self.settings.lock_file))
+            sys.exit(1)
+        else:
+            try:
+                open(self.settings.lock_file, 'a').close()
+            except Exception as error:
+                self.logger.error('Cannot set lock: {}'.format(error))
+                sys.exit(1)
+
         for plugin in args.plugin:
             for id in args.id:
                 config_data = self.db.list(plugin, id)
@@ -449,7 +458,12 @@ class Mosquito(object):
                             self.logger.info('Update interval has not been reached for the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
                     else:
                         self.logger.info('Configuration is disabled: {} -> {} -> {}'.format(source_id, plugin, source)) 
-                                    
+        
+        try:
+            os.remove(self.settings.lock_file)
+        except:
+            pass
+        
     def list(self, args):
         table = [[
                   'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 

@@ -26,6 +26,7 @@ class MosquitoSettings(object):
         settings = ConfigParser.RawConfigParser({
                                                'destination': None,
                                                'grab_timeout': 60,
+                                               'lock_file': '/tmp/mosquito.lock',
                                                'smtp_server': 'localhost',
                                                'smtp_port': 25,
                                                'smtp_usessl': 'False',
@@ -48,6 +49,7 @@ class MosquitoSettings(object):
                 self.destination = [x.strip(' ') for x in self.destination]
                 
             self.grab_timeout = settings.get('main', 'grab_timeout')
+            self.lock_file = settings.get('main', 'lock_file')
             self.smtp_server = settings.get('main', 'smtp_server')
             self.smtp_port = settings.get('main', 'smtp_port')
             self.smtp_usessl = settings.getboolean('main', 'smtp_usessl')
