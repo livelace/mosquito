@@ -407,13 +407,19 @@ class Mosquito(object):
                                 
                                 posts = self.rss.fetch()
                                 
-                                for post in posts:
-                                    post_timestamp = post[0]
-                                    original_content = post[1]
-                                    expanded_url = post[2]
+                                if posts:
+                                    count = 0
+                                    
+                                    for post in posts:
+                                        post_timestamp = post[0]
+                                        original_content = post[1]
+                                        expanded_url = post[2]
 
-                                    if (post_timestamp > config_timestamp) and self._check_regexp(original_content, regexp_list):
-                                        self._handle_content(source_id, original_content, expanded_url)
+                                        if (post_timestamp > config_timestamp) and self._check_regexp(original_content, regexp_list):
+                                            self._handle_content(source_id, original_content, expanded_url)
+                                            count += 1
+                                            
+                                    self.logger.info('Data has been processed: {} -> {} -> {}'.format(plugin, source, count))
 
                             elif plugin == 'twitter':
                                 self.twitter = MosquitoTwitter()
