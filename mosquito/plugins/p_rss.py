@@ -22,9 +22,9 @@ class MosquitoRSS(object):
             if len(post.links[0]['href']) > 0:
                 expanded_url = post.links[0]['href']
                 
-            if post.published_parsed:
+            try:
                 timestamp = time.mktime(post.published_parsed)
-            else:
+            except:
                 timestamp = time.mktime(datetime.utcnow().timetuple())
                 
             results.append([timestamp, post.title, expanded_url])
