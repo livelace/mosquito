@@ -30,7 +30,6 @@ from help import MosquitoHelp
 
 from plugins.p_rss import MosquitoRSS
 from plugins.p_twitter import MosquitoTwitter
-from mercurial.revset import destination
 
 class Mosquito(object):
        
