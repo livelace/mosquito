@@ -28,11 +28,14 @@ class MosquitoRSS(object):
             try:
                 timestamp = time.mktime(post.updated_parsed)
             except:
-                timestamp = time.mktime(datetime.utcnow().timetuple())    
+                pass    
                 
             try:
                 timestamp = time.mktime(post.published_parsed)
             except:
+                pass
+            
+            if not timestamp:
                 timestamp = time.mktime(datetime.utcnow().timetuple())
                 
             results.append([timestamp, post.title, expanded_url])
