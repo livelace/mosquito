@@ -30,6 +30,7 @@ from help import MosquitoHelp
 
 from plugins.p_rss import MosquitoRSS
 from plugins.p_twitter import MosquitoTwitter
+from mercurial.revset import destination
 
 class Mosquito(object):
        
@@ -215,7 +216,7 @@ class Mosquito(object):
                 self.logger.warning('Cannot grab image from the URL: {} -> {}'.format(expanded_url, warning))
         elif grab == 'text':
             try:
-                # Omit HTTP requests 
+                # Hide HTTP requests 
                 self.logger.setLevel('ERROR')
                 page = requests.get(expanded_url, timeout=float(self.settings.grab_timeout))
                 self.logger.setLevel(self.settings.logger)
@@ -230,7 +231,7 @@ class Mosquito(object):
         config_data = self.db.list('all', source_id)
         destination = ast.literal_eval(config_data[0][4])
         regexp_action_list = ast.literal_eval(config_data[0][8])
-        operation_timestamp = time.mktime(datetime.utcnow().timetuple())
+        current_timestamp = time.mktime(datetime.utcnow().timetuple())
         
         self.logger.debug('Trying to process data')
             
@@ -305,14 +306,14 @@ class Mosquito(object):
                                     source_id, destination, header_list, priority, 
                                     subject, original_content, 
                                     expanded_text_content, expanded_image_content, 
-                                    operation_timestamp
+                                    current_timestamp
                                     )                                                                       
         else:                      
             self.db.add_archive(
                                 source_id, destination, header_list, priority, 
                                 subject, original_content,
                                 expanded_text_content, expanded_image_content,
-                                operation_timestamp
+                                current_timestamp
                                 )
                 
     def _human_time(self, seconds):   
@@ -407,12 +408,19 @@ class Mosquito(object):
                     config_enabled = data[1]
                     plugin = data[2]
                     source = data[3]
+                    destination_list = data[4]
                     update_interval = data[5]
                     regexp_list = ast.literal_eval(data[7])
                     config_timestamp = data[9]
+                    current_timestamp = time.mktime(datetime.utcnow().timetuple())
                                      
-                    if config_enabled == 'True' or args.force:
-                        if time.mktime(datetime.utcnow().timetuple())-config_timestamp > update_interval or args.force:
+                    # Check if we haven't received new data during specific interval
+                    if current_timestamp > (config_timestamp + self._check_interval(self.settings.update_alert)):
+                        self.logger.debug('New data is not available: {} -> {} -> {}'.format(source_id, plugin, source))
+                        self.mail.send(destination_list, None, None, 'Alert', 'Alert message', None, None)
+                                     
+                    if args.force or config_enabled == 'True':
+                        if args.force or (current_timestamp - config_timestamp) > update_interval:
                             self.logger.debug('Processing the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
                             
                             if plugin == 'rss':

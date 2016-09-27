@@ -69,6 +69,9 @@ smtp_password = Passw0rD
 
 subject_length = 100
 
+# Send an alert email, if new data isn't available during specific interval
+update_alert = 7d
+
 # Update interval by default
 update_interval = 15m
 
