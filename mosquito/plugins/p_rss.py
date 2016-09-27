@@ -15,7 +15,6 @@ class MosquitoRSS(object):
         self.url = url
         
     def fetch(self):
-        date_indication = 'current timestamp'
         results = []
         
         parser = feedparser.parse(self.url)
@@ -28,19 +27,16 @@ class MosquitoRSS(object):
                 
             try:
                 timestamp = time.mktime(post.updated_parsed)
-                date_indication = 'updated_parsed'
             except:
                 timestamp = time.mktime(datetime.utcnow().timetuple())    
                 
             try:
                 timestamp = time.mktime(post.published_parsed)
-                date_indication = 'published_parsed'
             except:
                 timestamp = time.mktime(datetime.utcnow().timetuple())
                 
             results.append([timestamp, post.title, expanded_url])
         
-        self.logger.debug('Date indication variable is: '.format(date_indication))
         return results
             
 
