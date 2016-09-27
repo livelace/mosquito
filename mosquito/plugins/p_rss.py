@@ -4,6 +4,7 @@
 import feedparser
 import logging
 import time
+import warnings
 from datetime import datetime
 
 
@@ -11,6 +12,9 @@ class MosquitoRSS(object):
     def __init__(self, url):
         # Set logger
         self.logger = logging.getLogger('[RSS]')
+        
+        #Filter feed parser deprecation warnings
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
         
         self.url = url
         
