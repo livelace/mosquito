@@ -413,11 +413,10 @@ class Mosquito(object):
                     config_timestamp = data[9]
                     current_timestamp = time.mktime(datetime.utcnow().timetuple())
                                      
-                    print type(self._check_interval(self.settings.update_alert))
                     # Check if we haven't received new data during specific interval
-                    #if current_timestamp > (config_timestamp + self._check_interval(self.settings.update_alert)):
-                    #    self.logger.info('New data is not available: {} -> {} -> {}'.format(source_id, plugin, source))
-                    #    self.mail.send(destination_list, None, None, 'Alert', 'Alert message', None, None)
+                    if current_timestamp > (config_timestamp + int(self._check_interval(self.settings.update_alert))):
+                        self.logger.info('New data is not available: {} -> {} -> {}'.format(source_id, plugin, source))
+                        self.mail.send(destination_list, None, None, 'Alert', 'Alert message', None, None)
                                      
                     if args.force or config_enabled == 'True':
                         if args.force or (current_timestamp - config_timestamp) > update_interval:
