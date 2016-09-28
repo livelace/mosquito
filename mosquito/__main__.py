@@ -218,7 +218,7 @@ class Mosquito(object):
                 # Hide HTTP requests 
                 coloredlogs.set_level('ERROR')
                 page = requests.get(expanded_url, timeout=float(self.settings.grab_timeout))
-                coloredlogs.set_level('INFO')
+                coloredlogs.set_level(self.settings.logger)
                 
                 h2t = HTML2Text()
                 h2t.ignore_links = True
@@ -420,7 +420,7 @@ class Mosquito(object):
                                      
                     if args.force or config_enabled == 'True':
                         if args.force or (current_timestamp - config_timestamp) > update_interval:
-                            self.logger.debug('Processing the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
+                            self.logger.info('Processing the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
                             
                             if plugin == 'rss':
                                 self.rss = MosquitoRSS(source)
