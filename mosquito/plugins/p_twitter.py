@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import coloredlogs
 import logging
 import time
 import twitter
@@ -16,8 +15,6 @@ class MosquitoTwitter(object):
         self.settings = MosquitoSettings()
         
         # Set logger
-        coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
-        coloredlogs.install(level=self.settings.verbose)
         self.logger = logging.getLogger('[TWITTER]')
         
         # Status of the plugin

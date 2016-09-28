@@ -3,12 +3,10 @@
 
 """ Module for configurations database """
 
-import coloredlogs
 import os
 import logging
 import sys
 import sqlite3
-from mosquito.settings import MosquitoSettings
 
 class MosquitoDB(object):
     
@@ -20,12 +18,7 @@ class MosquitoDB(object):
         return results 
     
     def __init__(self):
-        # Get the settings
-        self.settings = MosquitoSettings()
-        
         # Set logger
-        coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
-        coloredlogs.install(level=self.settings.verbose)
         self.logger = logging.getLogger('[DB]')
 
         self.mosquito_db = os.path.join(os.environ['HOME'], '.mosquito.sqlite3')

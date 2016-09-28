@@ -15,6 +15,7 @@ import sys
 import subprocess
 import time
 import validators
+import warnings
 
 from datetime import datetime
 from distutils.util import strtobool
@@ -509,6 +510,9 @@ class Mosquito(object):
 
         # Hide HTTP requests
         logging.getLogger("requests").setLevel(logging.WARNING)
+
+        # Hide feedparser deprecation warnings
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # List of supported plugins
         self.plugins = ['twitter', 'rss']

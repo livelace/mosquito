@@ -2,25 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import feedparser
-import coloredlogs
 import logging
 import time
-import warnings
 from datetime import datetime
-from mosquito.settings import MosquitoSettings
+
 
 class MosquitoRSS(object):
     def __init__(self, url):
-        # Get the settings
-        self.settings = MosquitoSettings()
-        
         # Set logger
-        coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
-        coloredlogs.install(level=self.settings.verbose)
         self.logger = logging.getLogger('[RSS]')
-        
-        #Filter feed parser deprecation warnings
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
         
         self.url = url
         
