@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import feedparser
+import coloredlogs
 import logging
 import time
 import warnings

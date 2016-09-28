@@ -6,8 +6,8 @@
 import argparse
 import ast
 import chardet
-import logging
 import coloredlogs
+import logging
 import os
 import re
 import requests
@@ -415,8 +415,8 @@ class Mosquito(object):
                                      
                     # Check if we haven't received the new data during a specific interval
                     if current_timestamp > (config_timestamp + int(self._check_interval(self.settings.update_alert))):
-                        self.logger.info('No new data from the source: {} -> {} -> {}'.format(source_id, plugin, source))
-                        self.mail.send(destination_list, None, None, '***No new data from the source***', source, None, None)
+                        self.logger.info('No new data from the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
+                        self.mail.send(destination_list, None, None, '***No new data from the configuration***', source, None, None)
                                      
                     if args.force or config_enabled == 'True':
                         if args.force or (current_timestamp - config_timestamp) > update_interval:
