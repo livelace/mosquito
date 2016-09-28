@@ -20,9 +20,6 @@ class MosquitoTwitter(object):
         coloredlogs.install(level=self.settings.verbose)
         self.logger = logging.getLogger('[TWITTER]')
         
-        # Hide HTTP requests
-        logging.getLogger("requests").setLevel(logging.WARNING)
-        
         # Status of the plugin
         self.active = False
         
