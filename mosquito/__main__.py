@@ -218,7 +218,7 @@ class Mosquito(object):
                 # Hide HTTP requests 
                 coloredlogs.set_level('ERROR')
                 page = requests.get(expanded_url, timeout=float(self.settings.grab_timeout))
-                coloredlogs.set_level(self.settings.logger.upper())
+                coloredlogs.set_level(self.settings.verbose)
                 
                 h2t = HTML2Text()
                 h2t.ignore_links = True
