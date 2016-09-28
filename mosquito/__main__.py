@@ -462,7 +462,7 @@ class Mosquito(object):
                             # Update timestamp for the configuration
                             self.db.mark_config(source_id, time.mktime(datetime.utcnow().timetuple()))
                         else:
-                            self.logger.info('Update interval has not been reached for the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
+                            self.logger.info('Update interval has not been reached: {} -> {} -> {}'.format(source_id, plugin, source))
                     else:
                         self.logger.info('Configuration is disabled: {} -> {} -> {}'.format(source_id, plugin, source)) 
         

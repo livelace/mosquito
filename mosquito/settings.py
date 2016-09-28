@@ -9,7 +9,6 @@ import os
 import sys
 import ConfigParser
 
-
 class MosquitoSettings(object):
     
     def __init__(self):
