@@ -216,7 +216,7 @@ class Mosquito(object):
         elif grab == 'text':
             try:
                 # Hide HTTP requests 
-                self.logger.setLevel('INFO')
+                self.logger.setLevel(20)
                 page = requests.get(expanded_url, timeout=float(self.settings.grab_timeout))
                 self.logger.setLevel(self.settings.logger)
                 
