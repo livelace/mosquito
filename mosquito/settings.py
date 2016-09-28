@@ -16,7 +16,7 @@ class MosquitoSettings(object):
         # Set logger
         logging.basicConfig()
         coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
-        coloredlogs.install(level='INFO') 
+        coloredlogs.install('INFO') 
         self.logger = logging.getLogger('[SETTINGS]')
         
         # Try to find the configuration file

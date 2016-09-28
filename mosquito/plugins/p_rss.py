@@ -12,6 +12,8 @@ from datetime import datetime
 class MosquitoRSS(object):
     def __init__(self, url):
         # Set logger
+        coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
+        coloredlogs.install()
         self.logger = logging.getLogger('[RSS]')
         
         #Filter feed parser deprecation warnings

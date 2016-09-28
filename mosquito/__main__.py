@@ -505,7 +505,7 @@ class Mosquito(object):
             self.logger.info('No configurations were found')
     
     def __init__(self):
-        # First we get the settings
+        # Get the settings
         self.settings = MosquitoSettings()
         
         coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'

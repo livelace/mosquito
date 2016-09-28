@@ -12,21 +12,23 @@ from mosquito.settings import MosquitoSettings
 class MosquitoTwitter(object):
     
     def __init__(self):
+        # Get the settings
+        self.settings = MosquitoSettings()
+        
         # Set logger
+        coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
+        coloredlogs.install()
         self.logger = logging.getLogger('[TWITTER]')
         
         # Status of the plugin
         self.active = False
         
-        # Try to connect to Twitter
-        settings = MosquitoSettings()
-        
-        if settings.twitter:
+        if self.settings.twitter:
             try:
-                self.api = twitter.Api(consumer_key=settings.twitter_consumer_key,
-                    consumer_secret=settings.twitter_consumer_secret,
-                    access_token_key=settings.twitter_access_token_key,
-                    access_token_secret=settings.twitter_access_token_secret)
+                self.api = twitter.Api(consumer_key=self.settings.twitter_consumer_key,
+                    consumer_secret=self.settings.twitter_consumer_secret,
+                    access_token_key=self.settings.twitter_access_token_key,
+                    access_token_secret=self.settings.twitter_access_token_secret)
                 self.api.VerifyCredentials()
                 self.active = True
                 self.logger.debug('Logon process to Twitter account has been successfully completed')
