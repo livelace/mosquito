@@ -216,9 +216,9 @@ class Mosquito(object):
         elif grab == 'text':
             try:
                 # Hide HTTP requests 
-                self.logger.setLevel(logging.ERROR)
+                coloredlogs.set_level('ERROR')
                 page = requests.get(expanded_url, timeout=float(self.settings.grab_timeout))
-                self.logger.setLevel(logging.ERROR)
+                coloredlogs.set_level(self.settings.logger)
                 
                 h2t = HTML2Text()
                 h2t.ignore_links = True
@@ -407,7 +407,7 @@ class Mosquito(object):
                     config_enabled = data[1]
                     plugin = data[2]
                     source = data[3]
-                    destination_list = data[4]
+                    destination_list = ast.literal_eval(data[4])
                     update_interval = data[5]
                     regexp_list = ast.literal_eval(data[7])
                     config_timestamp = data[9]
