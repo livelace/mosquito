@@ -424,7 +424,6 @@ class Mosquito(object):
                             
                             if plugin == 'rss':
                                 self.rss = MosquitoRSS(source)
-                                
                                 posts = self.rss.fetch()
                                 
                                 if posts:

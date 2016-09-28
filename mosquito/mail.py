@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import coloredlogs
 import logging
 import smtplib
 from email.header import Header
@@ -12,10 +13,15 @@ from settings import MosquitoSettings
 class MosquitoMail(object):
     
     def __init__(self):
+        # Get the settings
+        self.settings = MosquitoSettings()
+
+        # Set logger
+        coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
+        coloredlogs.install(level=self.settings.verbose)
         self.logger = logging.getLogger('[MAIL]')
         
         self.active = False
-        self.settings = MosquitoSettings()
 
         if self.settings.smtp_usessl:
             try:

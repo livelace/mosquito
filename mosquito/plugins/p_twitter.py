@@ -17,7 +17,7 @@ class MosquitoTwitter(object):
         
         # Set logger
         coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
-        coloredlogs.install()
+        coloredlogs.install(level=self.settings.verbose)
         self.logger = logging.getLogger('[TWITTER]')
         
         # Status of the plugin
