@@ -216,9 +216,9 @@ class Mosquito(object):
         elif grab == 'text':
             try:
                 # Hide HTTP requests 
-                self.logger.setLevel(logging.INFO)
+                self.logger.setLevel(logging.ERROR)
                 page = requests.get(expanded_url, timeout=float(self.settings.grab_timeout))
-                self.logger.setLevel(logging.INFO)
+                self.logger.setLevel(logging.ERROR)
                 
                 h2t = HTML2Text()
                 h2t.ignore_links = True
