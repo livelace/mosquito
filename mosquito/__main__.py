@@ -215,11 +215,7 @@ class Mosquito(object):
                 self.logger.warning('Cannot grab image from the URL: {} -> {}'.format(expanded_url, warning))
         elif grab == 'text':
             try:
-                # Hide HTTP requests 
-                coloredlogs.set_level('ERROR')
                 page = requests.get(expanded_url, timeout=float(self.settings.grab_timeout))
-                coloredlogs.set_level(self.settings.verbose)
-                
                 h2t = HTML2Text()
                 h2t.ignore_links = True
                 return h2t.handle(self._convert_encoding(page.content))
@@ -510,6 +506,9 @@ class Mosquito(object):
         coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
         coloredlogs.install(level=self.settings.verbose)    
         self.logger = logging.getLogger('[MAIN]')
+
+        # Hide HTTP requests
+        logging.getLogger("requests").setLevel(logging.WARNING)
 
         # List of supported plugins
         self.plugins = ['twitter', 'rss']
