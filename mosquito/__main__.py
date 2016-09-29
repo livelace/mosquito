@@ -243,7 +243,7 @@ class Mosquito(object):
         # Multiple headers support
         header_list = []
         # Add service headers
-        header_list.append('X-mosquito-id:' + source_id)
+        header_list.append('X-mosquito-id:' + str(source_id))
         header_list.append('X-mosquito-plugin:' + plugin)
         header_list.append('X-mosquito-source:' + source)
         header_list.append('X-mosquito-expanded-url:' + expanded_url)
