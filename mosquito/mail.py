@@ -59,7 +59,7 @@ class MosquitoMail(object):
                 # Set a custom header
                 if header_list:
                     for header in header_list:
-                        msg.add_header(header.split(':')[0], header.split(':')[1])
+                        msg.add_header(header.split(':', 1)[0], header.split(':', 1)[1])
                       
                 # Set a priority
                 if priority:
