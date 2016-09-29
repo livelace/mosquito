@@ -77,14 +77,14 @@ class MosquitoMail(object):
                 # Add expanded text
                 if expanded_text_content:
                     text = MIMEText(expanded_text_content.encode('utf-8'), 'plain')
-                    text.add_header('Content-Disposition', 'attachment', filename='page.txt')
+                    text.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.txt')
                     text.set_charset('utf-8')
                     msg.attach(text)
 
                 # Add expanded image
                 if expanded_image_content:
                     image = MIMEImage(expanded_image_content, 'png')
-                    image.add_header('Content-Disposition', 'attachment', filename='page.png')
+                    image.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.png')
                     msg.attach(image)
                     
                 # Convert envelope to string

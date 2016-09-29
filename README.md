@@ -54,6 +54,9 @@
 ```
 [main]
 
+# Attachment name
+attachment_name = mosquito
+
 # Destination by default
 destination = user1@example.com, user2@example.com
 

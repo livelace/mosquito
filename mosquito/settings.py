@@ -26,6 +26,7 @@ class MosquitoSettings(object):
             sys.exit(1)        
         
         settings = ConfigParser.RawConfigParser({
+                                               'attachment_name': 'mosquito',
                                                'destination': None,
                                                'grab_timeout': 60,
                                                'lock_file': '/tmp/mosquito.lock',
@@ -51,6 +52,7 @@ class MosquitoSettings(object):
                 self.destination = self.destination.split(',')
                 self.destination = [x.strip(' ') for x in self.destination]
                 
+            self.attachment_name = settings.get('main', 'attachment_name')
             self.grab_timeout = settings.get('main', 'grab_timeout')
             self.lock_file = settings.get('main', 'lock_file')
             self.smtp_server = settings.get('main', 'smtp_server')
