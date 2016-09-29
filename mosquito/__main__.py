@@ -225,6 +225,8 @@ class Mosquito(object):
                 
     def _handle_content(self, source_id, original_content, expanded_url):
         config_data = self.db.list('all', source_id)
+        plugin = config_data[0][2]
+        source = config_data[0][3]
         destination = ast.literal_eval(config_data[0][4])
         regexp_action_list = ast.literal_eval(config_data[0][8])
         current_timestamp = time.mktime(datetime.utcnow().timetuple())
@@ -240,6 +242,10 @@ class Mosquito(object):
 
         # Multiple headers support
         header_list = []
+        header_list.append('X-mosquito-id:' + source_id)
+        header_list.append('X-mosquito-plugin:' + plugin)
+        header_list.append('X-mosquito-source:' + source)
+        header_list.append('X-mosquito-expanded-url:' + expanded_url)
 
         # Check actions which were set for configuration
         for action in regexp_action_list:
