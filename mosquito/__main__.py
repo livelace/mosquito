@@ -385,6 +385,7 @@ class Mosquito(object):
             
     def fetch(self, args):
         
+        # Check if mosquito already running
         if os.path.exists(self.settings.lock_file):
             self.logger.error('Mosquito already running. The lock file exist: {}'.format(self.settings.lock_file))
             sys.exit(1)
@@ -395,6 +396,7 @@ class Mosquito(object):
                 self.logger.error('Cannot set lock: {}'.format(error))
                 sys.exit(1)
 
+        # Loop over configurations
         for plugin in args.plugin:
             for id in args.id:
                 config_data = self.db.list(plugin, id)
@@ -509,7 +511,8 @@ class Mosquito(object):
         self.logger = logging.getLogger('[MAIN]')
 
         # Hide HTTP requests
-        logging.getLogger("requests").setLevel(logging.WARNING)
+        if self.settings.verbose.upper() != 'DEBUG': 
+            logging.getLogger("requests").setLevel(logging.WARNING)
 
         # Hide feedparser deprecation warnings
         warnings.filterwarnings("ignore", category=DeprecationWarning)
