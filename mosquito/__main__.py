@@ -245,7 +245,7 @@ class Mosquito(object):
         # Add service headers
         header_list.append('X-mosquito-id:' + str(source_id))
         header_list.append('X-mosquito-plugin:' + plugin)
-        header_list.append('X-mosquito-source:' + source)
+        header_list.append('X-mosquito-source:' + source.replace('http://','').replace('https://',''))
         header_list.append('X-mosquito-expanded-url:' + expanded_url.replace('http://','').replace('https://',''))
 
         # Check actions which were set for configuration
