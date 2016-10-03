@@ -486,7 +486,7 @@ class Mosquito(object):
         table = [[
                   'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 
                   'Update interval', 'Description', 'Regexp', 'Regexp action', 
-                  'Last update'
+                  'Last update', 'Count'
                 ]]
         
         for plugin in args.plugin:
@@ -499,7 +499,8 @@ class Mosquito(object):
                               self._human_time(int(data[5])), data[6], 
                               '\n'.join(ast.literal_eval(data[7])), 
                               '\n'.join(ast.literal_eval(data[8])), 
-                              datetime.fromtimestamp(int(data[9]))])
+                              datetime.fromtimestamp(int(data[9])),
+                              data[10]])
                     
         if len(table) > 1:
             table = AsciiTable(table)
