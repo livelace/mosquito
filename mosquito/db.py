@@ -39,7 +39,8 @@ class MosquitoDB(object):
                                                 description TEXT,
                                                 regexp TEXT,
                                                 regexp_action TEXT,
-                                                timestamp INTEGER NOT NULL
+                                                timestamp INTEGER NOT NULL,
+                                                counter INTEGER
                                                 )''')
                 
                 self._sql('''CREATE TABLE archive (
@@ -173,8 +174,15 @@ class MosquitoDB(object):
             return self._sql(sql)
         except Exception as error:
             self.logger.error('Cannot get the list of archives: {}'.format(error))
-    
-    def mark_config(self, id, timestamp):
+
+    def update_counter(self, id, count):
+        try:
+            sql = "UPDATE configuration SET counter = counter + '{}' WHERE id = '{}'".format(count, id)
+            self._sql(sql)
+        except Exception as error:
+            self.logger.error('Cannot update the counter for the configuration: {}'.format(error))
+ 
+    def update_timestamp(self, id, timestamp):
         try:
             sql = "UPDATE configuration SET timestamp = '{}' WHERE id = '{}'".format(timestamp, id)
             self._sql(sql)

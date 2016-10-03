@@ -369,7 +369,7 @@ class Mosquito(object):
 
         self.db.create('True', plugin , source, destination_list, 
                         update_interval, description, regexp_list, 
-                        regexp_action_list, '0')
+                        regexp_action_list, '0', '0')
 
     def delete(self, args):
         if self._check_confirmation('Please, confirm the deletion'):
@@ -469,7 +469,9 @@ class Mosquito(object):
                                     self.logger.warning('Cannot load the configuration because the plugin is not active: {} -> {} -> {}'.format(source_id, plugin, source))
                             
                             # Update timestamp for the configuration
-                            self.db.mark_config(source_id, time.mktime(datetime.utcnow().timetuple()))
+                            self.db.update_timestamp(source_id, time.mktime(datetime.utcnow().timetuple()))
+                            # Increase counter for the configuration
+                            self.db.update_counter(source_id, count)
                         else:
                             self.logger.info('Update interval has not been reached: {} -> {} -> {}'.format(source_id, plugin, source))
                     else:
