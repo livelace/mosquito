@@ -507,6 +507,7 @@ class Mosquito(object):
             table.justify_columns[1] = 'center'
             table.justify_columns[5] = 'center'
             table.justify_columns[7] = 'center'
+            table.justify_columns[10] = 'center'
             table.inner_row_border = True
             print table.table  
         else:
