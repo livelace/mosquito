@@ -440,9 +440,12 @@ class Mosquito(object):
                                         original_content = post[1]
                                         expanded_url = post[2]
 
-                                        if (post_timestamp > config_timestamp) and self._check_regexp(original_content, regexp_list):
-                                            self._handle_content(source_id, original_content, expanded_url)
-                                            count += 1
+                                        if (post_timestamp > config_timestamp):
+                                            if self._check_regexp(original_content, regexp_list):
+                                                self._handle_content(source_id, original_content, expanded_url)
+                                                count += 1
+                                        else
+                                            self.logger.debug('The message timestamp is lower than the config timestamp: {} -> {}'.format(post_timestamp, config_timestamp))
                                             
                                     self.logger.info('Data has been processed: {} -> {} -> {} -> {}'.format(source_id, plugin, source, count))
 
@@ -460,9 +463,12 @@ class Mosquito(object):
                                             original_content = tweet[1]
                                             expanded_url = tweet[2]
                                         
-                                            if (tweet_timestamp > config_timestamp) and self._check_regexp(original_content, regexp_list):
-                                                self._handle_content(source_id, original_content, expanded_url)
-                                                count += 1
+                                            if (tweet_timestamp > config_timestamp):
+                                                self._check_regexp(original_content, regexp_list):
+                                                    self._handle_content(source_id, original_content, expanded_url)
+                                                    count += 1
+                                            else:
+                                                self.logger.debug('The message timestamp is lower than the config timestamp: {} -> {}'.format(post_timestamp, config_timestamp))
                                                 
                                         self.logger.info('Data has been processed: {} -> {} -> {} -> {}'.format(source_id, plugin, source, count))
                                 else:
