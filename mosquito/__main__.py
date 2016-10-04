@@ -474,10 +474,11 @@ class Mosquito(object):
                                 else:
                                     self.logger.warning('Cannot load the configuration because the plugin is not active: {} -> {} -> {}'.format(source_id, plugin, source))
                             
-                            # Update timestamp for the configuration
-                            self.db.update_timestamp(source_id, time.mktime(datetime.utcnow().timetuple()))
-                            # Increase counter for the configuration
-                            self.db.update_counter(source_id, count)
+                            if count > 0:
+                                # Update timestamp for the configuration
+                                self.db.update_timestamp(source_id, time.mktime(datetime.utcnow().timetuple()))
+                                # Increase counter for the configuration
+                                self.db.update_counter(source_id, count)
                         else:
                             self.logger.info('Update interval has not been reached: {} -> {} -> {}'.format(source_id, plugin, source))
                     else:
