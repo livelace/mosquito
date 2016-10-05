@@ -94,18 +94,18 @@ class MosquitoDB(object):
             self.logger.error('Cannot archive data to the database: {}'.format(error))
         
     def create(self, enabled, plugin, source, destination_list, update_interval, 
-               description, regexp_list, regexp_action_list, timestamp):
+               description, regexp_list, regexp_action_list, timestamp, counter):
         
         try:
             sql = '''INSERT INTO configuration (
                                                 enabled, plugin, source, destination, 
                                                 update_interval, description, regexp, 
-                                                regexp_action, timestamp
-                                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);'''
+                                                regexp_action, timestamp, counter
+                                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'''
         
             self.conn.execute(sql,[enabled, plugin, source, str(destination_list), 
                                update_interval, description, str(regexp_list), 
-                               str(regexp_action_list), timestamp])
+                               str(regexp_action_list), timestamp, counter])
             self.conn.commit()
             self.logger.info('The configuration has been created: {} -> {}'.format(plugin, source))
         except Exception as error:
