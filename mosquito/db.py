@@ -35,6 +35,7 @@ class MosquitoDB(object):
                                                 plugin TEXT NOT NULL,
                                                 source TEXT NOT NULL,
                                                 destination TEXT NOT NULL,
+                                                update_alert INTEGER NOT NULL,
                                                 update_interval INTEGER NOT NULL,
                                                 description TEXT,
                                                 regexp TEXT,
@@ -93,19 +94,22 @@ class MosquitoDB(object):
         except Exception as error:
             self.logger.error('Cannot archive data to the database: {}'.format(error))
         
-    def create(self, enabled, plugin, source, destination_list, update_interval, 
-               description, regexp_list, regexp_action_list, timestamp, counter):
+    def create(self, enabled, plugin, source, destination_list, update_alert, 
+               update_interval, description, regexp_list, regexp_action_list, 
+               timestamp, counter):
         
         try:
             sql = '''INSERT INTO configuration (
                                                 enabled, plugin, source, destination, 
-                                                update_interval, description, regexp, 
-                                                regexp_action, timestamp, counter
-                                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'''
+                                                update_alert, update_interval, 
+                                                description, regexp, regexp_action, 
+                                                timestamp, counter
+                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?);'''
         
             self.conn.execute(sql,[enabled, plugin, source, str(destination_list), 
-                               update_interval, description, str(regexp_list), 
-                               str(regexp_action_list), timestamp, counter])
+                               update_alert, update_interval, description, 
+                               str(regexp_list), str(regexp_action_list), 
+                               timestamp, counter])
             self.conn.commit()
             self.logger.info('The configuration has been created: {} -> {}'.format(plugin, source))
         except Exception as error:

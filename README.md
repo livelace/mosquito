@@ -10,7 +10,8 @@
 * Support regexp (case insensitive) for content filtering.
 * Support regexp actions (if regexp was found) for content processing.
 * Support for offline mode. Save data to database if a SMTP server is not reachable.
-* Support individual an update interval for configurations.
+* Support of update intervals for configurations.
+* Support of update alerts for configurations.
 
 ### Available actions:
 
@@ -72,7 +73,7 @@ smtp_password = Passw0rD
 
 subject_length = 100
 
-# Send an alert email, if new data isn't available during specific interval
+# Send an alert email, if no new data during specific interval
 update_alert = 7d
 
 # Update interval by default

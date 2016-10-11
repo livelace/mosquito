@@ -1,4 +1,4 @@
-#!/usr/bin/env python  -W ignore::DeprecationWarning
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """ Main module """
@@ -228,7 +228,7 @@ class Mosquito(object):
         plugin = config_data[0][2]
         source = config_data[0][3]
         destination = ast.literal_eval(config_data[0][4])
-        regexp_action_list = ast.literal_eval(config_data[0][8])
+        regexp_action_list = ast.literal_eval(config_data[0][9])
         current_timestamp = time.mktime(datetime.utcnow().timetuple())
         
         self.logger.debug('Trying to process data')
@@ -355,6 +355,7 @@ class Mosquito(object):
         plugin = self._check_plugin(args.plugin)
         source = args.source
         destination_list = self._check_destination(args.destination)
+        update_alert = self._check_interval(args.update_alert)
         update_interval = self._check_interval(args.update_interval)
         description = self._check_description(args.description)
         regexp_list = args.regexp
@@ -367,7 +368,7 @@ class Mosquito(object):
         for action in regexp_action_list:
             self._check_action(action)
 
-        self.db.create('True', plugin , source, destination_list, 
+        self.db.create('True', plugin , source, destination_list, update_alert, 
                         update_interval, description, regexp_list, 
                         regexp_action_list, '0', '0')
 
@@ -414,15 +415,11 @@ class Mosquito(object):
                     plugin = data[2]
                     source = data[3]
                     destination_list = ast.literal_eval(data[4])
-                    update_interval = data[5]
-                    regexp_list = ast.literal_eval(data[7])
-                    config_timestamp = data[9]
+                    update_alert = data[5]
+                    update_interval = data[6]
+                    regexp_list = ast.literal_eval(data[8])
+                    config_timestamp = data[10]
                     current_timestamp = time.mktime(datetime.utcnow().timetuple())
-                                     
-                    # Check if we haven't received the new data during a specific interval
-                    if current_timestamp > (config_timestamp + int(self._check_interval(self.settings.update_alert))):
-                        self.logger.warning('No new data from the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
-                        self.mail.send(destination_list, None, None, '***No new data from the configuration***', '{} -> {} -> {}'.format(source_id, plugin, source), None, None)
                                      
                     if args.force or config_enabled == 'True':
                         if args.force or (current_timestamp - config_timestamp) > update_interval:
@@ -439,7 +436,7 @@ class Mosquito(object):
                                         post_timestamp = post[0]
                                         original_content = post[1]
                                         expanded_url = post[2]
-
+                                        
                                         if (post_timestamp > config_timestamp):
                                             if self._check_regexp(original_content, regexp_list):
                                                 self._handle_content(source_id, original_content, expanded_url)
@@ -468,7 +465,7 @@ class Mosquito(object):
                                                     self._handle_content(source_id, original_content, expanded_url)
                                                     count += 1
                                             else:
-                                                self.logger.debug('The message timestamp is lower than the config timestamp: {} -> {}'.format(post_timestamp, config_timestamp))
+                                                self.logger.debug('The message timestamp is lower than the config timestamp: {} -> {}'.format(tweet_timestamp, config_timestamp))
                                                 
                                         self.logger.info('Data has been processed: {} -> {} -> {} -> {}'.format(source_id, plugin, source, count))
                                 else:
@@ -479,6 +476,11 @@ class Mosquito(object):
                                 self.db.update_timestamp(source_id, time.mktime(datetime.utcnow().timetuple()))
                                 # Increase counter for the configuration
                                 self.db.update_counter(source_id, count)
+                            else:
+                                # Check if we haven't received the new data during a specific interval
+                                if current_timestamp > (config_timestamp + int(update_alert)):
+                                    self.logger.warning('No new data for the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
+                                    self.mail.send(destination_list, None, None, '***No new data from the configuration***', '{} -> {} -> {}'.format(source_id, plugin, source), None, None)
                         else:
                             self.logger.info('Update interval has not been reached: {} -> {} -> {}'.format(source_id, plugin, source))
                     else:
@@ -492,8 +494,8 @@ class Mosquito(object):
     def list(self, args):
         table = [[
                   'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 
-                  'Update interval', 'Description', 'Regexp', 'Regexp action', 
-                  'Last update', 'Count'
+                  'Update alert', 'Update interval', 'Description', 'Regexp', 
+                  'Regexp action', 'Last update', 'Count'
                 ]]
         
         for plugin in args.plugin:
@@ -503,16 +505,18 @@ class Mosquito(object):
                         table.append([
                               data[0], data[1], data[2], data[3], 
                               '\n'.join(ast.literal_eval(data[4])), 
-                              self._human_time(int(data[5])), data[6], 
-                              '\n'.join(ast.literal_eval(data[7])), 
+                              self._human_time(int(data[5])), 
+                              self._human_time(int(data[6])), data[7], 
                               '\n'.join(ast.literal_eval(data[8])), 
-                              datetime.fromtimestamp(int(data[9])),
-                              data[10]])
+                              '\n'.join(ast.literal_eval(data[9])), 
+                              datetime.fromtimestamp(int(data[10])),
+                              data[11]])
                     
         if len(table) > 1:
             table = AsciiTable(table)
             table.justify_columns[1] = 'center'
             table.justify_columns[5] = 'center'
+            table.justify_columns[6] = 'center'
             table.justify_columns[7] = 'center'
             table.justify_columns[10] = 'center'
             table.inner_row_border = True
@@ -558,6 +562,8 @@ class Mosquito(object):
                                           help='see documentation')
         parser_create.add_argument('--destination', nargs='+', default=self.settings.destination, 
                                           help='space separated list of email addresses')
+        parser_create.add_argument('--update-alert', default=self.settings.update_alert,
+                                          help='update alert e.g. 1s, 2m, 3h, 4d')  
         parser_create.add_argument('--update-interval', default=self.settings.update_interval,
                                           help='update interval e.g. 1s, 2m, 3h, 4d')
         parser_create.add_argument('--description', nargs='+', type=lambda s: unicode(s, 'utf8'),
@@ -618,3 +624,5 @@ def main():
     
 if __name__ == '__main__':
     main()
+    
+    
