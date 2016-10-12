@@ -36,6 +36,7 @@ class MosquitoSettings(object):
                                                'subject_length': 100,
                                                'update_alert': '7d',
                                                'update_interval': '15m',
+                                               'user_agent': 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; FSL 7.0.6.01001)',
                                                'verbose': 'info'
                                                })
         
@@ -61,6 +62,7 @@ class MosquitoSettings(object):
             self.subject_length = settings.get('main', 'subject_length')
             self.update_alert = settings.get('main', 'update_alert')
             self.update_interval = settings.get('main', 'update_interval')
+            self.user_agent = settings.get('main', 'user_agent')
             self.verbose = settings.get('main', 'verbose')
             
             # Try to obtain Twitter settings

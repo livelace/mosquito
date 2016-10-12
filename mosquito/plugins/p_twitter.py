@@ -46,7 +46,7 @@ class MosquitoTwitter(object):
                     timestamp = time.mktime(datetime.strptime(status.created_at, '%a %b %d %H:%M:%S +0000 %Y').timetuple())
                 
                     if len(status.urls) > 0:
-                        expanded_url = status.urls[0].expanded_url.rstrip()
+                        expanded_url = status.urls[0].expanded_url
                 
                     results.append([timestamp, status.text, expanded_url])
                 

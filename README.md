@@ -79,6 +79,9 @@ update_alert = 7d
 # Update interval by default
 update_interval = 15m
 
+# Custom User-Agent string
+user_agent = Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; FSL 7.0.6.01001)
+
 # Verbosity level
 verbose = info
 
