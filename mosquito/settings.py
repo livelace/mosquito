@@ -36,7 +36,7 @@ class MosquitoSettings(object):
                                                'subject_length': 100,
                                                'update_alert': '7d',
                                                'update_interval': '15m',
-                                               'user_agent': 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; FSL 7.0.6.01001)',
+                                               'user_agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36',
                                                'verbose': 'info'
                                                })
         
