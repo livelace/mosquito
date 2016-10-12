@@ -24,7 +24,7 @@ class MosquitoRSS(object):
             
             try:
                 if len(post.links[0]['href']) > 0:
-                    expanded_url = post.links[0]['href']
+                    expanded_url = post.links[0]['href'].rstrip()
             except:
                 pass
                 
