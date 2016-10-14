@@ -367,8 +367,9 @@ class Mosquito(object):
             self.logger.error('Destination is required')
             sys.exit(1)
 
-        for action in regexp_action_list:
-            self._check_action(action)
+        if regexp_action_list:
+            for action in regexp_action_list:
+                self._check_action(action)
 
         self.db.create('True', plugin , source, destination_list, update_alert, 
                         update_interval, description, regexp_list, 
@@ -530,8 +531,9 @@ class Mosquito(object):
             self.logger.error('ID is required')
             sys.exit(1)
 
-        for action in regexp_action_list:
-            self._check_action(action)
+        if regexp_action_list:
+            for action in regexp_action_list:
+                self._check_action(action)
             
         for id in id_list:
             config_data = self.db.list('all', id)
