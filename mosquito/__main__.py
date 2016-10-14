@@ -495,10 +495,10 @@ class Mosquito(object):
                 for data in self.db.list(plugin, id):
                     if len(data) > 0:                        
                         table.append([
-                              data[0], data[1], data[2], '\n'.join(wrap(data[3], 30)), 
+                              data[0], data[1], data[2], '\n'.join(wrap(str(data[3]), 30)), 
                               '\n'.join(ast.literal_eval(data[4])), 
                               self._human_time(int(data[5])), 
-                              self._human_time(int(data[6])), '\n'.join(wrap(data[7], 30)), 
+                              self._human_time(int(data[6])), '\n'.join(wrap(str(data[7]), 30)), 
                               '\n'.join(ast.literal_eval(data[8])), 
                               '\n'.join(ast.literal_eval(data[9])), 
                               datetime.fromtimestamp(int(data[10])),
