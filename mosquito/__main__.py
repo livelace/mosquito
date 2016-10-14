@@ -537,7 +537,6 @@ class Mosquito(object):
             
         for id in id_list:
             config_data = self.db.list('all', id)
-            print config_data
             
             if enabled != 'True' or enabled != 'False':
                 enabled = config_data[0][1]
@@ -570,8 +569,6 @@ class Mosquito(object):
                 
             if not regexp_action_list:
                 regexp_action_list = config_data[0][9]
-        
-
         
             self.db.update(id, enabled, plugin , source, destination_list, 
                            update_alert, update_interval, description, regexp_list, 
