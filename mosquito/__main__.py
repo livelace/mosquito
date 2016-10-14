@@ -379,19 +379,7 @@ class Mosquito(object):
             for plugin in args.plugin:
                 if plugin == 'all' or plugin in self.plugins:
                     for id in args.id:
-                        self.db.delete(plugin, id)
-                
-    def disable(self, args):
-        for plugin in args.plugin:
-            if plugin == 'all' or plugin in self.plugins:
-                for id in args.id:
-                    self.db.switch_config(plugin, id, 'False')
-                  
-    def enable(self, args):
-        for plugin in args.plugin:
-            if plugin == 'all' or plugin in self.plugins:
-                for id in args.id:
-                    self.db.switch_config(plugin, id, 'True')        
+                        self.db.delete(plugin, id)      
             
     def fetch(self, args):
         
@@ -526,6 +514,67 @@ class Mosquito(object):
         else:
             self.logger.info('No configurations were found')
     
+    def set(self, args):
+        id_list = args.id
+        enabled = args.enabled
+        plugin = self._check_plugin(args.plugin)
+        source = args.source
+        destination_list = self._check_destination(args.destination)
+        update_alert = self._check_interval(args.update_alert)
+        update_interval = self._check_interval(args.update_interval)
+        description = self._check_description(args.description)
+        regexp_list = args.regexp
+        regexp_action_list = args.regexp_action
+
+        if not id_list:
+            self.logger.error('ID is required')
+            sys.exit(1)
+
+        for action in regexp_action_list:
+            self._check_action(action)
+            
+        for id in id_list:
+            config_data = self.db.list('all', id)
+            print config_data
+            
+            if enabled != 'True' or enabled != 'False':
+                enabled = config_data[0][1]
+                
+            if not plugin:
+                plugin = config_data[0][2]
+                
+            if not source:
+                source = config_data[0][3]
+                timestamp = config_data[0][10]
+                counter = config_data[0][11]
+            else:
+                timestamp = 0
+                counter = 0
+                
+            if not destination_list:
+                destination_list = config_data[0][4]
+                
+            if not update_alert:
+                update_alert = config_data[0][5]
+                
+            if not update_interval:
+                update_interval = config_data[0][6]
+                
+            if not description:
+                description = config_data[0][7]
+                
+            if not regexp_list:
+                regexp_list = config_data[0][8]
+                
+            if not regexp_action_list:
+                regexp_action_list = config_data[0][9]
+        
+
+        
+            self.db.update(id, enabled, plugin , source, destination_list, 
+                           update_alert, update_interval, description, regexp_list, 
+                           regexp_action_list, timestamp, counter)
+    
     def __init__(self):
         # Get the settings
         self.settings = MosquitoSettings()
@@ -584,22 +633,6 @@ class Mosquito(object):
                                           help='a space separated list of IDs')
         parser_delete.set_defaults(func=self.delete)
         
-        # Create 'disable' parser
-        parser_disable = subparsers.add_parser('disable', help=self.help.disable)
-        parser_disable.add_argument('--plugin', nargs='+', default=['all'], 
-                                          help='a space separated list of plugins')
-        parser_disable.add_argument('--id', nargs='+', default=['all'], 
-                                          help='a space separated list of IDs')
-        parser_disable.set_defaults(func=self.disable)      
-        
-        # Create 'enable' parser
-        parser_enable = subparsers.add_parser('enable', help=self.help.enable)
-        parser_enable.add_argument('--plugin', nargs='+', default=['all'], 
-                                          help='a space separated list of plugins')
-        parser_enable.add_argument('--id', nargs='+', default=['all'], 
-                                          help='a space separated list of IDs')
-        parser_enable.set_defaults(func=self.enable)
-        
         # Create 'fetch' parser
         parser_fetch = subparsers.add_parser('fetch', help=self.help.fetch)
         parser_fetch.add_argument('--plugin', nargs='+', default=['all'], 
@@ -617,7 +650,31 @@ class Mosquito(object):
         parser_list.add_argument('--id', nargs='+', default=['all'], 
                                           help='a space separated list of IDs')
         parser_list.set_defaults(func=self.list)        
-        
+
+        # Create 'set' parser
+        parser_set = subparsers.add_parser('set', help=self.help.set)
+        parser_set.add_argument('--id', nargs='+', 
+                                          help='a space separated list of IDs')
+        parser_set.add_argument('--enabled',
+                                          help='')
+        parser_set.add_argument('--plugin',
+                                          help='a plugin name e.g. rss, twitter')
+        parser_set.add_argument('--source', 
+                                          help='see documentation')
+        parser_set.add_argument('--destination', nargs='+', 
+                                          help='space separated list of email addresses')
+        parser_set.add_argument('--update-alert',
+                                          help='update alert e.g. 1s, 2m, 3h, 4d')  
+        parser_set.add_argument('--update-interval',
+                                          help='update interval e.g. 1s, 2m, 3h, 4d')
+        parser_set.add_argument('--description', nargs='+', type=lambda s: unicode(s, 'utf8'),
+                                          help='description text')
+        parser_set.add_argument('--regexp', nargs='+', type=lambda s: unicode(s, 'utf8'), 
+                                          help='see documentation')
+        parser_set.add_argument('--regexp-action', nargs='+',
+                                          help='see documentation')
+        parser_set.set_defaults(func=self.set)
+       
         results = parser.parse_args()
         results.func(results)
 

@@ -116,14 +116,14 @@ Delete specific configuration:
 mosquito delete --id 1
 ```
 
-Disable all RSS configurations:
+Update specific configuration:
 ```
-mosquito disable --plugin rss
+mosquito set --id 1 --source http://example.com --update-interval 1w
 ```
 
 Disable specific configuration:
 ```
-mosquito disable --id 1
+mosquito set --id 1 --enabled False
 ```
 
 ### Output examples:

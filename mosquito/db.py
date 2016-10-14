@@ -179,6 +179,26 @@ class MosquitoDB(object):
         except Exception as error:
             self.logger.error('Cannot get the list of archives: {}'.format(error))
 
+    def update(self, id, enabled, plugin, source, destination_list, update_alert, 
+               update_interval, description, regexp_list, regexp_action_list, 
+               timestamp, counter):
+        
+        try:
+            sql = '''UPDATE configuration SET enabled=?, plugin=?, source=?, 
+                                    destination=?, update_alert=?, 
+                                    update_interval=?, description=?, 
+                                    regexp=?, regexp_action=?, timestamp=?, 
+                                    counter=? WHERE id=?;'''
+        
+            self.conn.execute(sql,[enabled, plugin, source, str(destination_list), 
+                               update_alert, update_interval, description, 
+                               str(regexp_list), str(regexp_action_list), 
+                               timestamp, counter, id])
+            self.conn.commit()
+            self.logger.info('The configuration has been updated: {} -> {}'.format(plugin, source))
+        except Exception as error:
+            self.logger.error('Cannot update the configuration: {}'.format(error))
+
     def update_counter(self, id, count):
         try:
             sql = "UPDATE configuration SET counter = counter + '{}' WHERE id = '{}'".format(count, id)
@@ -192,31 +212,5 @@ class MosquitoDB(object):
             self._sql(sql)
         except Exception as error:
             self.logger.error('Cannot update the timestamp for the configuration: {}'.format(error))
-        
-    def switch_config(self, plugin, id, switch):
-        if switch == 'True':
-            message = 'enabled'
-        else:
-            message = 'disabled'
-            
-        try:
-            if plugin == 'all' and id == 'all':
-                sql = "UPDATE configuration SET enabled='{}'".format(switch)
-                self.logger.info('All configurations have been {}'.format(message))
-                return self._sql(sql)    
-            elif plugin == 'all' and id != 'all':
-                sql = "UPDATE configuration SET enabled='{}' WHERE id = '{}'".format(switch, id)
-                self.logger.info('Configuration has been {}: {}'.format(message, id))
-                return self._sql(sql)
-            elif plugin != 'all' and id == 'all':
-                sql = "UPDATE configuration SET enabled='{}' WHERE plugin = '{}'".format(switch, plugin)
-                self.logger.info('All configurations for the plugin have been {}: {}'.format(message, plugin))
-                return self._sql(sql)
-            elif plugin != 'all' and id != 'all':
-                sql = "UPDATE configuration SET enabled='{}' WHERE plugin = '{}' AND id = '{}'".format(switch, plugin, id)
-                self.logger.info('Configuration has been {}: {}'.format(message, id))
-                return self._sql(sql)
-        except Exception as error:
-            self.logger.error('Cannot enable/disable configurations: {}'.format(error))
 
 
