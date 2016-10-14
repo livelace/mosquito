@@ -23,6 +23,7 @@ from html2text import HTML2Text
 from selenium import webdriver
 from tempfile import mkstemp
 from terminaltables import AsciiTable
+from textwrap import wrap
 
 from db import MosquitoDB
 from mail import MosquitoMail
@@ -485,7 +486,7 @@ class Mosquito(object):
     def list(self, args):
         table = [[
                   'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 
-                  'Update alert', 'Update interval', 'Description', 'Regexp', 
+                  'Alert', 'Interval', 'Desc', 'Regexp', 
                   'Regexp action', 'Last update', 'Count'
                 ]]
         
@@ -494,10 +495,10 @@ class Mosquito(object):
                 for data in self.db.list(plugin, id):
                     if len(data) > 0:                        
                         table.append([
-                              data[0], data[1], data[2], data[3], 
+                              data[0], data[1], data[2], '\n'.join(wrap(data[3], 30)), 
                               '\n'.join(ast.literal_eval(data[4])), 
                               self._human_time(int(data[5])), 
-                              self._human_time(int(data[6])), data[7], 
+                              self._human_time(int(data[6])), '\n'.join(wrap(data[7], 30)), 
                               '\n'.join(ast.literal_eval(data[8])), 
                               '\n'.join(ast.literal_eval(data[9])), 
                               datetime.fromtimestamp(int(data[10])),
@@ -674,7 +675,8 @@ class Mosquito(object):
                                           help='see documentation')
         parser_set.set_defaults(func=self.set)
        
-        results = parser.parse_args()
+        results = parser.parse_args('list --id 79'.split())
+        #results = parser.parse_args('set --id 79 --description aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'.split())
         results.func(results)
 
 def main():
