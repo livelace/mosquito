@@ -675,8 +675,7 @@ class Mosquito(object):
                                           help='see documentation')
         parser_set.set_defaults(func=self.set)
        
-        results = parser.parse_args('list --id 79'.split())
-        #results = parser.parse_args('set --id 79 --description aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'.split())
+        results = parser.parse_args()
         results.func(results)
 
 def main():
