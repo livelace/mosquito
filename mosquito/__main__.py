@@ -495,7 +495,7 @@ class Mosquito(object):
                 for data in self.db.list(plugin, id):
                     if len(data) > 0:                        
                         table.append([
-                              data[0], data[1], data[2], '\n'.join(wrap(str(data[3]), 30)), 
+                              data[0], data[1], data[2], '\n'.join(wrap(str(data[3]), 42)), 
                               '\n'.join(ast.literal_eval(data[4])), 
                               self._human_time(int(data[5])), 
                               self._human_time(int(data[6])), '\n'.join(wrap(str(data[7]), 30)), 
@@ -507,6 +507,7 @@ class Mosquito(object):
         if len(table) > 1:
             table = AsciiTable(table)
             table.justify_columns[1] = 'center'
+            table.justify_columns[2] = 'center'
             table.justify_columns[5] = 'center'
             table.justify_columns[6] = 'center'
             table.justify_columns[7] = 'center'
