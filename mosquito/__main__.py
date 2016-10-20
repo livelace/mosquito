@@ -344,7 +344,7 @@ class Mosquito(object):
 
         for archive in archive_list:
             destination_list = ast.literal_eval(archive[2])
-            header_list = archive[3]
+            header_list = ast.literal_eval(archive[3])
             priority = archive[4]
             subject = archive[5]
             original_content = archive[6]
