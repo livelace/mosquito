@@ -355,6 +355,7 @@ class Mosquito(object):
                               original_content, expanded_text_content, 
                               expanded_image_content):
                 
+                self.logger.warning('SMTP server is available. Archive data has been sent')
                 self.db.delete_archive(archive[0])
      
     def create(self, args):
