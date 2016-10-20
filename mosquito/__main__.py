@@ -308,6 +308,8 @@ class Mosquito(object):
             if not self.mail.send(destination, header_list, priority, subject, 
                                   original_content, expanded_text_content, 
                                   expanded_image_content):
+                
+                self.logger.debug('SMTP server is not available. Add data to the archive')
                 self.db.add_archive(
                                     source_id, destination, header_list, priority, 
                                     subject, original_content, 
@@ -315,6 +317,7 @@ class Mosquito(object):
                                     current_timestamp
                                     )                                                                       
         else:                      
+            self.logger.debug('SMTP server is not available. Add data to the archive')
             self.db.add_archive(
                                 source_id, destination, header_list, priority, 
                                 subject, original_content,
