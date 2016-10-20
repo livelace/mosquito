@@ -230,7 +230,7 @@ class Mosquito(object):
         config_data = self.db.list('all', source_id)
         plugin = config_data[0][2]
         source = config_data[0][3]
-        destination = ast.literal_eval(config_data[0][4])
+        destination_list = ast.literal_eval(config_data[0][4])
         regexp_action_list = ast.literal_eval(config_data[0][9])
         current_timestamp = time.mktime(datetime.utcnow().timetuple())
         
@@ -305,21 +305,21 @@ class Mosquito(object):
         # 1. We will try send archived data
         # 2. If a mail server goes down in the middle of operation we just have to save data to archive
         if self.mail.active:       
-            if not self.mail.send(destination, header_list, priority, subject, 
+            if not self.mail.send(destination_list, header_list, priority, subject, 
                                   original_content, expanded_text_content, 
                                   expanded_image_content):
                 
-                self.logger.debug('SMTP server is not available. Add data to the archive')
+                self.logger.warning('SMTP server is not available. Add data to the archive')
                 self.db.add_archive(
-                                    source_id, destination, header_list, priority, 
+                                    source_id, destination_list, header_list, priority, 
                                     subject, original_content, 
                                     expanded_text_content, expanded_image_content, 
                                     current_timestamp
                                     )                                                                       
         else:                      
-            self.logger.debug('SMTP server is not available. Add data to the archive')
+            self.logger.warning('SMTP server is not available. Add data to the archive')
             self.db.add_archive(
-                                source_id, destination, header_list, priority, 
+                                source_id, destination_list, header_list, priority, 
                                 subject, original_content,
                                 expanded_text_content, expanded_image_content,
                                 current_timestamp

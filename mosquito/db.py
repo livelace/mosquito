@@ -73,7 +73,7 @@ class MosquitoDB(object):
                 self.logger.error('Cannot connect to the database')
                 sys.exit(1)
                 
-    def add_archive(self, source_id, destination_list, header, priority, subject, 
+    def add_archive(self, source_id, destination_list, header_list, priority, subject, 
                     original_content, expanded_text_content, 
                     expanded_image_content, timestamp):
 
@@ -87,7 +87,7 @@ class MosquitoDB(object):
                                         expanded_image_content, timestamp) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);'''
          
-            self.conn.execute(sql,[source_id, str(destination_list), header, priority, 
+            self.conn.execute(sql,[source_id, str(destination_list), str(header_list), priority, 
                                subject, original_content, expanded_text_content, 
                                expanded_image_content, timestamp])    
             self.conn.commit()
