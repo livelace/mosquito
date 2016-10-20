@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='mosquito',
-      version = '1.2',
+      version = '1.2.1',
       description = 'News aggregator',
       url = 'https://github.com/livelace/mosquito',
       author = 'Oleg Popov',
