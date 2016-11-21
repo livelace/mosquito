@@ -26,13 +26,16 @@
   
 * **grab** - grab the source of data  
     
-  e.g. grab=full|image|text  
+  e.g. grab=full|html|image|text  
   full - grab image and text  
+  html - grab only html  
   image - grab only image  
   text - grab only text
     
   images are captured with [PhantomJS](http://phantomjs.org/)  
-  text is fetched with [Requests](http://docs.python-requests.org/en/latest/)
+  html and text are fetched with [Requests](http://docs.python-requests.org/en/latest/)
+  
+  multiple grabs are supported
   
 * **header** - add a custom header into an email  
     
