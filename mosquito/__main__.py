@@ -52,7 +52,7 @@ class Mosquito(object):
             elif action_type == 'grab':
                 try:
                     grab_content = value.split('=')[1]
-                    if grab_content != 'full' and grab_content != 'text' and grab_content != 'image':
+                    if grab_content != 'full' and grab_content != 'html' and grab_content != 'image' and grab_content != 'text':
                         raise
                 except:
                     self.logger.error('Action \'grab\' must have a value')
@@ -206,7 +206,15 @@ class Mosquito(object):
             delete(expanded_image_file)
 
     def _grab(self, expanded_url, grab):
-        if grab == 'image':
+        
+        if grab == 'html':
+            headers = {'User-Agent': self.settings.user_agent}
+            try:
+                page = requests.get(expanded_url, headers=headers, timeout=float(self.settings.grab_timeout))
+                return self._convert_encoding(page.content)
+            except Exception as warning:
+                self.logger.warning('Cannot grab html from the URL: {} -> {}'.format(expanded_url, warning))
+        elif grab == 'image':
             try:
                 driver = webdriver.PhantomJS()
                 driver.set_window_size(1024, 768)
@@ -217,14 +225,13 @@ class Mosquito(object):
                 self.logger.warning('Cannot grab image from the URL: {} -> {}'.format(expanded_url, warning))
         elif grab == 'text':
             headers = {'User-Agent': self.settings.user_agent}
-            
             try:
                 page = requests.get(expanded_url, headers=headers, timeout=float(self.settings.grab_timeout))
                 h2t = HTML2Text()
                 h2t.ignore_links = True
                 return h2t.handle(self._convert_encoding(page.content))
             except Exception as warning:
-                self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))
+                self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))        
                 
     def _handle_content(self, source_id, original_content, expanded_url):
         config_data = self.db.list('all', source_id)
@@ -237,11 +244,14 @@ class Mosquito(object):
         self.logger.debug('Trying to process data')
             
         execute = None
-        grab = None
         priority = None
         subject = None
-        expanded_text_content = None
+        expanded_html_content = None
         expanded_image_content = None
+        expanded_text_content = None
+
+        # Multiple grab support
+        grab_list = []
 
         # Multiple headers support
         header_list = []
@@ -259,7 +269,7 @@ class Mosquito(object):
             if action_name == 'execute':
                 execute = action_value
             elif action_name == 'grab':
-                grab = action_value
+                grab_list.append(action_value)
             elif action_name == 'header':
                 header_list.append(action_value)
             elif action_name == 'priority':
@@ -289,40 +299,44 @@ class Mosquito(object):
         original_content = original_content + '\n\n---\n{}'.format(expanded_url)
                                               
         # Grab a remote content
-        if grab == 'text' and expanded_url:
-            expanded_text_content = self._grab(expanded_url, grab)
-        elif grab == 'screenshot' and expanded_url:
-            expanded_image_content = self._grab(expanded_url, grab)
-        elif grab == 'full' and expanded_url:
-            expanded_text_content = self._grab(expanded_url, 'text')
-            expanded_image_content = self._grab(expanded_url, 'image')
+        for grab in grab_list:
+            if grab == 'full' and expanded_url:
+                expanded_html_content = self._grab(expanded_url, 'html')
+                expanded_image_content = self._grab(expanded_url, 'image')
+                expanded_text_content = self._grab(expanded_url, 'text') 
+            elif grab == 'html' and expanded_url:
+                expanded_html_content = self._grab(expanded_url, grab)            
+            elif grab == 'image' and expanded_url:
+                expanded_image_content = self._grab(expanded_url, grab)
+            elif grab == 'text' and expanded_url:
+                expanded_text_content = self._grab(expanded_url, grab)
                                                 
         # Execute script
         if execute:
-            self._execute(execute, original_content, expanded_text_content, expanded_image_content)
+            self._execute(execute, original_content, expanded_html_content, expanded_image_content, expanded_text_content)
                                         
         # If a mail server is alive we:
         # 1. We will try send archived data
         # 2. If a mail server goes down in the middle of operation we just have to save data to archive
         if self.mail.active:       
             if not self.mail.send(destination_list, header_list, priority, subject, 
-                                  original_content, expanded_text_content, 
-                                  expanded_image_content):
+                                  original_content, expanded_html_content, 
+                                  expanded_image_content, expanded_text_content):
                 
                 self.logger.warning('SMTP server is not available. Add data to the archive')
                 self.db.add_archive(
                                     source_id, destination_list, header_list, priority, 
                                     subject, original_content, 
-                                    expanded_text_content, expanded_image_content, 
-                                    current_timestamp
+                                    expanded_html_content, expanded_image_content, 
+                                    expanded_text_content, current_timestamp
                                     )                                                                       
         else:                      
             self.logger.warning('SMTP server is not available. Add data to the archive')
             self.db.add_archive(
                                 source_id, destination_list, header_list, priority, 
                                 subject, original_content,
-                                expanded_text_content, expanded_image_content,
-                                current_timestamp
+                                expanded_html_content, expanded_image_content,
+                                expanded_text_content, current_timestamp
                                 )
                 
     def _human_time(self, seconds):   
@@ -348,12 +362,13 @@ class Mosquito(object):
             priority = archive[4]
             subject = archive[5]
             original_content = archive[6]
-            expanded_text_content = archive[7]
+            expanded_html_content = archive[7]
             expanded_image_content = archive[8]
+            expanded_text_content = archive[9]
                 
             if self.mail.send(destination_list, header_list, priority, subject, 
-                              original_content, expanded_text_content, 
-                              expanded_image_content):
+                              original_content, expanded_html_content, 
+                              expanded_image_content, expanded_text_content):
                 
                 self.logger.warning('SMTP server is available. Archive data has been sent')
                 self.db.delete_archive(archive[0])

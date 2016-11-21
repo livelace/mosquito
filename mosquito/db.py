@@ -52,8 +52,9 @@ class MosquitoDB(object):
                                             priority TEXT,
                                             subject TEXT,
                                             original_content TEXT,
-                                            expanded_text_content TEXT,
+                                            expanded_html_content TEXT,
                                             expanded_image_content BLOB,
+                                            expanded_text_content TEXT,
                                             timestamp INTEGER NOT NULL
                                             )''')   
                 
@@ -74,8 +75,8 @@ class MosquitoDB(object):
                 sys.exit(1)
                 
     def add_archive(self, source_id, destination_list, header_list, priority, subject, 
-                    original_content, expanded_text_content, 
-                    expanded_image_content, timestamp):
+                    original_content, expanded_html_content, expanded_image_content,
+                    expanded_text_content, timestamp):
 
         try:
             if expanded_image_content:
@@ -83,13 +84,13 @@ class MosquitoDB(object):
 
             sql = '''INSERT INTO archive (
                                         source_id, destination, header, priority, 
-                                        subject,original_content, expanded_text_content, 
-                                        expanded_image_content, timestamp) 
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);'''
+                                        subject,original_content, expanded_html_content, 
+                                        expanded_image_content, expanded_text_content, timestamp) 
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'''
          
             self.conn.execute(sql,[source_id, str(destination_list), str(header_list), priority, 
-                               subject, original_content, expanded_text_content, 
-                               expanded_image_content, timestamp])    
+                               subject, original_content, expanded_html_content, 
+                               expanded_image_content, expanded_text_content, timestamp])    
             self.conn.commit()
         except Exception as error:
             self.logger.error('Cannot archive data to the database: {}'.format(error))

@@ -47,7 +47,10 @@ class MosquitoMail(object):
             except Exception:
                 self.logger.warning('Cannot authenticate on SMTP server: {}:{}'.format(self.settings.smtp_server, self.settings.smtp_port))
                 
-    def send(self, destination_list, header_list, priority, subject, original_content, expanded_text_content, expanded_image_content):
+    def send(self, destination_list, header_list, priority, subject, 
+             original_content, expanded_html_content, 
+             expanded_image_content, expanded_text_content):
+        
         for email in destination_list:       
             try:
                 msg = MIMEMultipart()
@@ -74,18 +77,24 @@ class MosquitoMail(object):
                 original_content.set_charset('utf-8')
                 msg.attach(original_content)
            
-                # Add expanded text
-                if expanded_text_content:
-                    text = MIMEText(expanded_text_content.encode('utf-8'), 'plain')
-                    text.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.txt')
-                    text.set_charset('utf-8')
-                    msg.attach(text)
+                # Add expanded html
+                if expanded_html_content:
+                    html = MIMEText(expanded_html_content.encode('utf-8'), 'plain')
+                    html.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.html')
+                    msg.attach(html)
 
                 # Add expanded image
                 if expanded_image_content:
                     image = MIMEImage(expanded_image_content, 'png')
                     image.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.png')
                     msg.attach(image)
+                    
+                # Add expanded text
+                if expanded_text_content:
+                    text = MIMEText(expanded_text_content.encode('utf-8'), 'plain')
+                    text.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.txt')
+                    text.set_charset('utf-8')
+                    msg.attach(text)
                     
                 # Convert envelope to string
                 text = msg.as_string()
