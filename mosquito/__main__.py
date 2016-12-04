@@ -491,7 +491,7 @@ class Mosquito(object):
                                 # Check if we haven't received the new data during a specific interval
                                 if current_timestamp > (config_timestamp + int(update_alert)):
                                     self.logger.warning('No new data for the configuration: {} -> {} -> {}'.format(source_id, plugin, source))
-                                    self.mail.send(destination_list, None, None, '***No new data from the configuration***', '{} -> {} -> {}'.format(source_id, plugin, source), None, None)
+                                    self.mail.send(destination_list, None, None, '***No new data from the configuration***', '{} -> {} -> {}'.format(source_id, plugin, source), None, None, None)
                         else:
                             self.logger.info('Update interval has not been reached: {} -> {} -> {}'.format(source_id, plugin, source))
                     else:
