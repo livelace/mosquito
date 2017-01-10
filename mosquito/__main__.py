@@ -294,6 +294,8 @@ class Mosquito(object):
             
         if subject and len(subject) > self.settings.subject_length:
             subject = subject[:self.settings.subject_length] + ' ...'
+            
+        subject = re.sub(r"http.*", "", subject)
                                               
         # Add service data
         original_content = original_content + '\n\n---\n{}'.format(expanded_url)
