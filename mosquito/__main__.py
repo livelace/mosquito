@@ -561,7 +561,7 @@ class Mosquito(object):
         for id in id_list:
             config_data = self.db.list('all', id)
             
-            if enabled != 'True' or enabled != 'False':
+            if not enabled != 'True' and enabled != 'False':
                 enabled = config_data[0][1]
                 
             if not plugin:

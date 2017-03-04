@@ -191,7 +191,7 @@ class MosquitoDB(object):
                                     regexp=?, regexp_action=?, timestamp=?, 
                                     counter=? WHERE id=?;'''
         
-            self.conn.execute(sql,[str(enabled), plugin, source, str(destination_list),
+            self.conn.execute(sql,[enabled, plugin, source, str(destination_list),
                                update_alert, update_interval, description, 
                                str(regexp_list), str(regexp_action_list), 
                                timestamp, counter, id])
