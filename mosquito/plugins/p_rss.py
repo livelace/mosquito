@@ -21,6 +21,7 @@ class MosquitoRSS(object):
         
         for post in parser.entries:
             expanded_url = None
+            timestamp = None
             
             try:
                 if len(post.links[0]['href']) > 0:
