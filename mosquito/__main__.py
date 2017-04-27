@@ -259,7 +259,7 @@ class Mosquito(object):
         header_list.append('X-mosquito-id:' + str(source_id))
         header_list.append('X-mosquito-plugin:' + str(plugin))
         header_list.append('X-mosquito-source:' + str(source))
-        header_list.append('X-mosquito-expanded-url:' + str(expanded_url))
+        header_list.append('X-mosquito-expanded-url:' + self._convert_encoding(expanded_url))
 
         # Check actions which were set for configuration
         for action in regexp_action_list:
