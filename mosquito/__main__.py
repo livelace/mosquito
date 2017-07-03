@@ -7,6 +7,7 @@ import argparse
 import ast
 import chardet
 import coloredlogs
+import fcntl
 import logging
 import os
 import re
@@ -407,15 +408,12 @@ class Mosquito(object):
     def fetch(self, args):
         
         # Check if mosquito already running
-        if os.path.exists(self.settings.lock_file):
-            self.logger.error('Mosquito already running. The lock file exist: {}'.format(self.settings.lock_file))
+        try:
+            flock = open(self.settings.lock_file, 'a')
+            fcntl.flock(flock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except:
+            self.logger.error('Mosquito already running. Cannot set lock on: {}'.format(self.settings.lock_file))
             sys.exit(1)
-        else:
-            try:
-                open(self.settings.lock_file, 'a').close()
-            except Exception as error:
-                self.logger.error('Cannot set lock: {}'.format(error))
-                sys.exit(1)
 
         # Loop over configurations
         for plugin in args.plugin:
@@ -500,7 +498,7 @@ class Mosquito(object):
                         self.logger.info('Configuration is disabled: {} -> {} -> {}'.format(source_id, plugin, source)) 
         
         try:
-            os.remove(self.settings.lock_file)
+            fcntl.flock(flock, fcntl.LOCK_UN)
         except:
             pass
         
