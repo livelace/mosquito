@@ -7,6 +7,7 @@ import argparse
 import ast
 import chardet
 import coloredlogs
+import eventlet
 import fcntl
 import logging
 import os
@@ -33,6 +34,8 @@ from help import MosquitoHelp
 
 from plugins.p_rss import MosquitoRSS
 from plugins.p_twitter import MosquitoTwitter
+
+eventlet.monkey_patch()
 
 class Mosquito(object):
        
@@ -211,8 +214,9 @@ class Mosquito(object):
         if grab == 'html':
             headers = {'User-Agent': self.settings.user_agent}
             try:
-                page = requests.get(expanded_url, headers=headers, timeout=float(self.settings.grab_timeout))
-                return self._convert_encoding(page.content)
+                with eventlet.Timeout(float(self.settings.grab_timeout)):
+                    page = requests.get(expanded_url, headers=headers)
+                    return self._convert_encoding(page.content)
             except Exception as warning:
                 self.logger.warning('Cannot grab html from the URL: {} -> {}'.format(expanded_url, warning))
         elif grab == 'image':
@@ -227,10 +231,11 @@ class Mosquito(object):
         elif grab == 'text':
             headers = {'User-Agent': self.settings.user_agent}
             try:
-                page = requests.get(expanded_url, headers=headers, timeout=float(self.settings.grab_timeout))
-                h2t = HTML2Text()
-                h2t.ignore_links = True
-                return h2t.handle(self._convert_encoding(page.content))
+                with eventlet.Timeout(float(self.settings.grab_timeout)):
+                    page = requests.get(expanded_url, headers=headers)
+                    h2t = HTML2Text()
+                    h2t.ignore_links = True
+                    return h2t.handle(self._convert_encoding(page.content))
             except Exception as warning:
                 self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))        
                 
