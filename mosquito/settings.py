@@ -26,6 +26,7 @@ class MosquitoSettings(object):
                                                'destination': None,
                                                'grab_timeout': 60,
                                                'lock_file': '/tmp/mosquito.lock',
+                                               'mime': 'logstash',
                                                'smtp_server': 'localhost',
                                                'smtp_port': 25,
                                                'smtp_usessl': 'False',
@@ -52,6 +53,7 @@ class MosquitoSettings(object):
             self.attachment_name = settings.get('main', 'attachment_name')
             self.grab_timeout = settings.get('main', 'grab_timeout')
             self.lock_file = settings.get('main', 'lock_file')
+            self.mime = settings.get('main', 'mime')
             self.smtp_server = settings.get('main', 'smtp_server')
             self.smtp_port = settings.get('main', 'smtp_port')
             self.smtp_usessl = settings.getboolean('main', 'smtp_usessl')

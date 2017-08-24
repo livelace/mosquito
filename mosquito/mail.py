@@ -79,7 +79,7 @@ class MosquitoMail(object):
            
                 # Add expanded html
                 if expanded_html_content:
-                    html = MIMEText(expanded_html_content.encode('utf-8'), 'logstash')
+                    html = MIMEText(expanded_html_content.encode('utf-8'), self.settings.mime)
                     html.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.html')
                     msg.attach(html)
 
@@ -91,7 +91,7 @@ class MosquitoMail(object):
                     
                 # Add expanded text
                 if expanded_text_content:
-                    text = MIMEText(expanded_text_content.encode('utf-8'), 'logstash')
+                    text = MIMEText(expanded_text_content.encode('utf-8'), self.settings.mime)
                     text.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.txt')
                     text.set_charset('utf-8')
                     msg.attach(text)
