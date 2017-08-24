@@ -66,6 +66,9 @@ destination = user1@example.com, user2@example.com
 
 grab_timeout = 60
 
+# Set custom mime type for attachements
+mime = logstash
+
 smtp_server = mail.example.com
 smtp_port = 25
 smtp_usessl = true
