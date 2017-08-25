@@ -215,8 +215,11 @@ class Mosquito(object):
             headers = {'User-Agent': self.settings.user_agent}
             try:
                 with eventlet.Timeout(float(self.settings.grab_timeout)):
-                    page = requests.get(expanded_url, headers=headers)
-                    return self._convert_encoding(page.content)
+                    try:
+                        page = requests.get(expanded_url, headers=headers)
+                        return self._convert_encoding(page.content)
+                    except:
+                        pass
             except Exception as warning:
                 self.logger.warning('Cannot grab html from the URL: {} -> {}'.format(expanded_url, warning))
         elif grab == 'image':
