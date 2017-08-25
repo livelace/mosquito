@@ -232,10 +232,13 @@ class Mosquito(object):
             headers = {'User-Agent': self.settings.user_agent}
             try:
                 with eventlet.Timeout(float(self.settings.grab_timeout)):
-                    page = requests.get(expanded_url, headers=headers)
-                    h2t = HTML2Text()
-                    h2t.ignore_links = True
-                    return h2t.handle(self._convert_encoding(page.content))
+                    try:
+                        page = requests.get(expanded_url, headers=headers)
+                        h2t = HTML2Text()
+                        h2t.ignore_links = True
+                        return h2t.handle(self._convert_encoding(page.content))
+                    except:
+                        pass
             except Exception as warning:
                 self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))        
                 
