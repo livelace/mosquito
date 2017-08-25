@@ -218,8 +218,8 @@ class Mosquito(object):
                     try:
                         page = requests.get(expanded_url, headers=headers)
                         return self._convert_encoding(page.content)
-                    except:
-                        pass
+                    except Exception as warning:
+                        self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))
             except Exception as warning:
                 self.logger.warning('Cannot grab html from the URL: {} -> {}'.format(expanded_url, warning))
         elif grab == 'image':
@@ -240,10 +240,10 @@ class Mosquito(object):
                         h2t = HTML2Text()
                         h2t.ignore_links = True
                         return h2t.handle(self._convert_encoding(page.content))
-                    except:
-                        pass
+                    except Exception as warning:
+                        self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))
             except Exception as warning:
-                self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))        
+                self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))
                 
     def _handle_content(self, source_id, original_content, expanded_url):
         config_data = self.db.list('all', source_id)
