@@ -239,6 +239,7 @@ class Mosquito(object):
                         page = requests.get(expanded_url, headers=headers)
                         h2t = HTML2Text()
                         h2t.body_width = 0
+                        h2t.ignore_emphasis = True
                         return h2t.handle(self._convert_encoding(page.content))
                     except Exception as warning:
                         self.logger.warning('Cannot grab text from the URL: {} -> {}'.format(expanded_url, warning))
