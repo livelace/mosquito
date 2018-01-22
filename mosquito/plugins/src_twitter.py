@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import logging
 import time
@@ -8,8 +7,8 @@ import twitter
 from datetime import datetime
 from mosquito.settings import MosquitoSettings
 
+
 class MosquitoTwitter(object):
-    
     def __init__(self):
         # Get the settings
         self.settings = MosquitoSettings()
@@ -34,12 +33,12 @@ class MosquitoTwitter(object):
         else:
             self.logger.warning('Twitter settings are not set. The plugin has been disabled.')
 
-    def fetch(self, source):
+    def fetch(self, url):
         if self.active:
             try:
                 results = []
                 #print self.api.GetUserTimeline(screen_name=source)
-                statuses = self.api.GetUserTimeline(screen_name=source, count=200)
+                statuses = self.api.GetUserTimeline(screen_name=url, count=200)
 
                 for status in statuses:
                     expanded_url = None
@@ -50,8 +49,7 @@ class MosquitoTwitter(object):
                 
                     results.append([timestamp, status.text, expanded_url])
                 
-                self.logger.debug('Data has been fetched from the source: {}'.format(source))
+                self.logger.debug('Data has been fetched from the source: {}'.format(url))
                 return results
             except:
-                self.logger.error('Cannot fetch data from the source: {}'.format(source))
-            
+                self.logger.error('Cannot fetch data from the source: {}'.format(url))

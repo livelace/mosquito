@@ -1,47 +1,50 @@
 
 # mosquito
 
-*mosquito* is a news aggregator which supports various of data sources like RSS, Twitter and so on. It fetches data from news source and sends this data to email.  
+*mosquito* is a news aggregator which supports various types of data sources like RSS, Twitter etc. It fetches data (HTML, image, text) in parallel from sources and process that data in different manners: execute a shell script with arguments, send data to an email with custom properties (subject, priority, headers)).
 
 ### Main features:
 
-* Support as data source: RSS, Twitter.
-* Support for a capture of text and image from the page.
-* Support regexp (case insensitive) for content filtering.
-* Support regexp actions (if regexp was found) for content processing.
-* Support for offline mode. Save data to database if a SMTP server is not reachable.
-* Support of update intervals for configurations.
-* Support of update alerts for configurations.
+* Work in parallel. Each configuration works in a separate process (Python [multiproccessing](https://docs.python.org/3/library/multiprocessing.html)).
+* Support data sources: RSS, Twitter.
+* Support for a capture of image, HTML, text from a page.
+* Support regex (case insensitive) for content matching.
+* Support actions (if regex was found) for content processing.
+* Support an offline mode. Save data to a database if a SMTP server is not available.
+* Support update alerts and update intervals for configurations.
 
 ### Available actions:
 
 * **execute** - execute a script with parameters  
     
-  e.g. execute=/path/to/script.sh  
+  e.g. execute=/path/to/script.sh
+
   $1 - path to file with original content  
-  $2 - path to file with expanded text content  
-  $3 - path to file with expanded image content
+  $2 - path to a grabbed HTML file  
+  $3 - path to a grabbed image file  
+  $4 - path to a grabbed text file
   
-  files created as temporary with "mosquito _" prefix
+  files created as temporary with "mosquito _" prefix in their names
   
 * **grab** - grab the source of data  
     
-  e.g. grab=full|html|image|text  
-  full - grab image and text  
-  html - grab only html  
-  image - grab only image  
+  e.g. grab=full|html|image|text
+
+  full - grab image, HTML, text  
+  html - grab only HTML data  
+  image - grab only image data  
   text - grab only text
     
-  images are captured with [PhantomJS](http://phantomjs.org/)  
-  html and text are fetched with [Requests](http://docs.python-requests.org/en/latest/)
+  *images* are captured with help of [Selenium](http://selenium-python.readthedocs.io/) and [Firefox](https://www.mozilla.org/en-US/)  
+  *html* and *text* are fetched with [Requests](http://docs.python-requests.org/en/latest/)
   
-  multiple grabs are supported
+  multiple options are supported
   
 * **header** - add a custom header into an email  
     
   e.g header=X-foo:bar
     
-  multiple headers are supported
+  multiple options are supported
   
 * **prority** - set priority for an email  
     
@@ -50,25 +53,25 @@
 * **subject** - add a custom string to the email subject  
     
   e.g. subject=HelloWorld: 
-    
-  by default base subject assembled from first 100 characters of an original content
 
 ### Example of configuration file:
 
 ```
 [main]
 
-# Attachment name
+# Base prefix for attachments.
 attachment_name = mosquito
 
-# Destination by default
-destination = user1@example.com, user2@example.com
+# Destination by default.
+destination = user@example.com
 
+# Amount of time (seconds) for an entire connection.
 grab_timeout = 60
 
-# Set custom mime type for attachements
+# Set custom mime type for attachements. It could be need for ELK imap plugin, for instance :)
 mime = logstash
 
+# Email settings.
 smtp_server = mail.example.com
 smtp_port = 25
 smtp_usessl = true
@@ -77,20 +80,22 @@ smtp_from = mosquito@example.com
 smtp_username = user@example.com
 smtp_password = Passw0rD
 
+# Default length of an email subject.
 subject_length = 100
 
-# Send an alert email, if no new data during specific interval
+# Send an alert email, if no new data during specific interval. Default value.
 update_alert = 7d
 
-# Update interval by default
+# Update interval. Default value.
 update_interval = 15m
 
-# Custom User-Agent string
+# Custom "User-Agent" string.
 user_agent = Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; FSL 7.0.6.01001)
 
 # Verbosity level
 verbose = info
 
+# Twitter settings.
 [twitter]
 
 consumer_key = <CONSUMER_KEY>
@@ -104,12 +109,12 @@ access_token_secret = <ACCESS_SECRET>
 
 Create Twitter configuration:
 ```
-mosquito create --plugin twitter --source rianru --destination user@example.com --update-interval 1m --description 'РИА Новости' --regexp '.*' --regexp-action execute=/path/to/script.sh subject=Twitter: 
+mosquito create --plugin twitter --source rianru --destination user@example.com --update-interval 1m --description 'РИА Новости' --regexp '.*' --regex-action execute=/path/to/script.sh subject=Twitter: 
 ```
 
 Create RSS configuration:
 ```
-mosquito create --plugin rss --source http://feeds.dzone.com/home --destination user@example.com --update-interval 1d --description 'DZone feeds' --regexp 'javascript' --regexp-action grab=text header=X-mosquito:dzone 
+mosquito create --plugin rss --source http://feeds.dzone.com/home --destination user@example.com --update-interval 1d --description 'DZone feeds' --regex 'javascript' --regex-action grab=text header=X-mosquito:dzone 
 ```
 
 Delete all Twitter configurations:

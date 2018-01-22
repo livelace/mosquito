@@ -1,35 +1,26 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-""" Module for configurations database """
+#!/usr/bin/env python3
 
 import os
 import logging
 import sys
 import sqlite3
 
+
 class MosquitoDB(object):
-    
-    def _sql(self, request):
-        cursor = self.conn.cursor()
-        cursor.execute(request)       
-        results = cursor.fetchall()
-        self.conn.commit()
-        return results 
-    
-    def __init__(self):
-        # Set logger
+
+    def __init__(self, id=None, queue=None):
+        self.id = id
+        self.queue = queue
+
+        self.db = os.path.join(os.environ['HOME'], '.mosquito.sqlite3')
         self.logger = logging.getLogger('[DB]')
 
-        self.mosquito_db = os.path.join(os.environ['HOME'], '.mosquito.sqlite3')
-        
-        if not os.path.exists(self.mosquito_db):
-            self.logger.debug('Trying to initialize the database')
+        if not os.path.exists(self.db):
+            self.logger.debug('Trying to initialize a database')
             
             try:
-                self.conn = sqlite3.connect(self.mosquito_db)
-                
-                self._sql('''CREATE TABLE configuration (
+                self._sql_query(
+                    """CREATE TABLE configuration (
                                                 id INTEGER PRIMARY KEY NOT NULL,
                                                 enabled TEXT NOT NULL,
                                                 plugin TEXT NOT NULL,
@@ -42,9 +33,12 @@ class MosquitoDB(object):
                                                 regexp_action TEXT,
                                                 timestamp INTEGER NOT NULL,
                                                 counter INTEGER
-                                                )''')
+                    )
+                    """
+                )
                 
-                self._sql('''CREATE TABLE archive (
+                self._sql_query(
+                    """CREATE TABLE archive (
                                             id INTEGER PRIMARY KEY NOT NULL,
                                             source_id INTEGER NOT NULL,
                                             destination TEXT NOT NULL,
@@ -56,162 +50,298 @@ class MosquitoDB(object):
                                             expanded_image_content BLOB,
                                             expanded_text_content TEXT,
                                             timestamp INTEGER NOT NULL
-                                            )''')   
+                    )
+                    """
+                )
                 
-                self.logger.debug('Database has been initialized')             
-            except:
-                self.logger.error('Cannot initialize the database')
+                self._logger(
+                    "debug",
+                    "Database has been initialized: {}".format(self.db)
+                )
+
+            except Exception as error:
+                self._logger(
+                    "error",
+                    "Cannot initialize a database: {}".format(error)
+                )
                 sys.exit(1)
-        else:  
-            try:
-                self.conn = sqlite3.connect(self.mosquito_db)
-                try:
-                    self.conn.execute('VACUUM;')
-                    self.logger.debug('Database has been vacuumed')
-                except Exception as error:
-                    self.logger.error('Cannot clean the database: {}'.format(error))
-            except:
-                self.logger.error('Cannot connect to the database')
-                sys.exit(1)
-                
-    def add_archive(self, source_id, destination_list, header_list, priority, subject, 
-                    original_content, expanded_html_content, expanded_image_content,
-                    expanded_text_content, timestamp):
+
+    def _logger(self, level, message):
+        """ Log with logger, or put message to a queue """
+
+        if self.id and self.queue:
+            self.queue.put([
+                self.id,
+                level,
+                message
+            ])
+
+        else:
+            if level == "debug":
+                self.logger.debug(message)
+            elif level == "error":
+                self.logger.error(message)
+            elif level == "info":
+                self.logger.info(message)
+            elif level == "warning":
+                self.logger.warning(message)
+
+    def _sql_query(self, request):
+        """ Execute SQL query """
 
         try:
-            if expanded_image_content:
-                expanded_image_content = sqlite3.Binary(expanded_image_content)
+            conn = sqlite3.connect(self.db)
+            cursor = conn.cursor()
+            cursor.execute(request)
+            results = cursor.fetchall()
+            conn.commit()
 
-            sql = '''INSERT INTO archive (
+            return results
+
+        except Exception as error:
+            self._logger(
+                "error",
+                "SQL query was failed: {}".format(error)
+            )
+
+            return False
+
+    def add_archive(self, config_id, destinations, headers, priority, subject, original_content, grabbed_html,
+                    grabbed_image, grabbed_text, timestamp):
+
+        try:
+            if grabbed_image:
+                grabbed_image = sqlite3.Binary(grabbed_image)
+
+            sql = """INSERT INTO archive (
                                         source_id, destination, header, priority, 
                                         subject,original_content, expanded_html_content, 
                                         expanded_image_content, expanded_text_content, timestamp) 
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'''
-         
-            self.conn.execute(sql,[source_id, str(destination_list), str(header_list), priority, 
-                               subject, original_content, expanded_html_content, 
-                               expanded_image_content, expanded_text_content, timestamp])    
-            self.conn.commit()
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
+
+            conn = sqlite3.connect(self.db)
+            conn.execute(sql, [config_id, str(destinations), str(headers), priority, subject, original_content,
+                               grabbed_html, grabbed_image, grabbed_text, timestamp])
+            conn.commit()
+
         except Exception as error:
-            self.logger.error('Cannot archive data to the database: {}'.format(error))
+            self._logger(
+                "error",
+                "Cannot archive data to the database: {}".format(error)
+            )
         
-    def create(self, enabled, plugin, source, destination_list, update_alert, 
-               update_interval, description, regexp_list, regexp_action_list, 
-               timestamp, counter):
+    def create(self, enabled, plugin, source, destination, update_alert, update_interval, description, regex,
+               regex_action, timestamp, counter):
         
         try:
-            sql = '''INSERT INTO configuration (
+            sql = """INSERT INTO configuration (
                                                 enabled, plugin, source, destination, 
                                                 update_alert, update_interval, 
                                                 description, regexp, regexp_action, 
                                                 timestamp, counter
-                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?);'''
-        
-            self.conn.execute(sql,[enabled, plugin, source, str(destination_list), 
-                               update_alert, update_interval, description, 
-                               str(regexp_list), str(regexp_action_list), 
-                               timestamp, counter])
-            self.conn.commit()
-            self.logger.info('The configuration has been created: {} -> {}'.format(plugin, source))
+                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?);"""
+
+            conn = sqlite3.connect(self.db)
+            conn.execute(sql, [enabled, plugin, source, str(destination), update_alert, update_interval, description,
+                               str(regex), str(regex_action), timestamp, counter])
+            conn.commit()
+
+            self._logger(
+                "info",
+                "Configuration has been created: {} -> {}".format(plugin, source)
+            )
+
         except Exception as error:
-            self.logger.error('Cannot create the configuration: {}'.format(error))
+            self._logger(
+                "Cannot create configuration: {} -> {} -> {}".format(plugin, source, error)
+            )
         
     def delete(self, plugin, id):
-        if plugin == 'all' and id == 'all':
-            try:
-                sql = "DELETE FROM configuration"
-                self._sql(sql)
-                self.logger.info('All configurations have been deleted')
-            except:
-                self.logger.error('Cannot delete configuration: {} -> {}'.format(plugin, id))
-                
-        elif plugin == 'all' and id != 'all':
-            try:
-                sql = "DELETE FROM configuration WHERE id = '{}'".format(id)
-                self._sql(sql)
-                self.logger.info('The configuration has been deleted: {} -> {}'.format(plugin, id))
-            except:
-                self.logger.error('Cannot delete configuration: {} -> {}'.format(plugin, id))
-            
-        elif plugin != 'all' and id == 'all':
-            try:
-                sql = "DELETE FROM configuration WHERE plugin = '{}'".format(plugin)
-                self._sql(sql)        
-                self.logger.info('All configurations for specific plugin have been deleted: {}'.format(plugin))
-            except:
-                self.logger.error('Cannot delete configurations for specific plugin: {}'.format(plugin))
-        
-        elif plugin != 'all' and id != 'all':
-            try:
-                sql = "DELETE FROM configuration WHERE plugin = '{}' AND id = '{}'".format(plugin, id)
-                self._sql(sql)
-                self.logger.info('The configuration has been deleted: {} -> {}'.format(plugin, id))
-            except:
-                self.logger.error('Cannot delete configuration: {} -> {}'.format(plugin, id))
-   
+        if plugin:
+            query = "DELETE FROM configuration WHERE plugin = '{}'".format(plugin)
+        elif id:
+            query = "DELETE FROM configuration WHERE id = '{}'".format(id)
+
+        results = self._sql_query(query)
+
+        if isinstance(results, list):
+            if plugin:
+                self._logger(
+                    "info",
+                    "Plugin specific configurations were deleted: {}".format(plugin)
+                )
+            else:
+                self._logger(
+                    "info",
+                    "Configuration has been deleted: {}".format(id)
+                )
+
+            return True
+
+        else:
+            if plugin:
+                self._logger(
+                    "error",
+                    "Cannot delete plugin specific configurations: {}".format(plugin)
+                )
+            else:
+                self._logger(
+                    "error",
+                    "Cannot delete configuration: {}".format(id)
+                )
+
+            return False
+
     def delete_archive(self, id):
+        query = "DELETE FROM archive WHERE id = '{}'".format(id)
+        results = self._sql_query(query)
+
+        if isinstance(results, list):
+            self._logger(
+                "debug",
+                "Archived record has been deleted: {}".format(id)
+            )
+
+            return True
+
+        else:
+            self._logger(
+                "error",
+                "Cannot delete archived record: {}".format(id)
+            )
+
+            return False
+
+    def clean(self):
         try:
-            sql = "DELETE FROM archive WHERE id = '{}'".format(id)
-            self._sql(sql)
+            conn = sqlite3.connect(self.db)
+            conn.execute('VACUUM;')
+
+            self._logger(
+                "debug",
+                "Database has been vacuumed"
+            )
+
         except Exception as error:
-            self.logger.error('Cannot delete data from the archive: {} '.format(error))
+            self._logger(
+                "error",
+                "Cannot clean database: {}".format(error)
+            )
                    
     def list(self, plugin, id):
-        try:
-            if plugin == 'all' and id == 'all':
-                sql = "SELECT * FROM configuration"
-                return self._sql(sql)    
-            elif plugin == 'all' and id != 'all':
-                sql = "SELECT * FROM configuration WHERE id = '{}'".format(id)
-                return self._sql(sql)
-            elif plugin != 'all' and id == 'all':
-                sql = "SELECT * FROM configuration WHERE plugin = '{}'".format(plugin)
-                return self._sql(sql)
-            elif plugin != 'all' and id != 'all':
-                sql = "SELECT * FROM configuration WHERE plugin = '{}' AND id = '{}'".format(plugin, id)
-                return self._sql(sql)
-        except Exception as error:
-            self.logger.error('Cannot get the list of configurations: {}'.format(error))
+        if plugin == 'all' and id == 'all':
+            query = "SELECT * FROM configuration"
+        elif plugin == 'all' and id != 'all':
+            query = "SELECT * FROM configuration WHERE id = '{}'".format(id)
+        elif plugin != 'all' and id == 'all':
+            query = "SELECT * FROM configuration WHERE plugin = '{}'".format(plugin)
+
+        results = self._sql_query(query)
+
+        if isinstance(results, list):
+            self._logger(
+                "debug",
+                "Configurations were retrieved: {}".format(len(results))
+            )
+
+            return results
+
+        else:
+            self._logger(
+                "error",
+                "Cannot retrieve configurations from database"
+            )
+
+            return False
  
     def list_archive(self):
-        try:
-            sql = "SELECT * FROM archive"
-            return self._sql(sql)
-        except Exception as error:
-            self.logger.error('Cannot get the list of archives: {}'.format(error))
+        query = "SELECT * FROM archive"
+        results = self._sql_query(query)
 
-    def update(self, id, enabled, plugin, source, destination_list, update_alert, 
-               update_interval, description, regexp_list, regexp_action_list, 
-               timestamp, counter):
+        if isinstance(results, list):
+            if len(results) > 0:
+                self._logger(
+                    "debug",
+                    "Archived records have been retrieved: {}".format(len(results))
+                )
+
+                return results
+
+            elif len(results) == 0:
+                self._logger(
+                    "debug",
+                    "There are no archived records. Skipping sending archived records."
+                )
+
+                return True
+
+        else:
+            self._logger(
+                "error",
+                "Cannot get archived data!"
+            )
+
+            return False
+
+    def update(self, id, enabled, plugin, source, destination_list, update_alert, update_interval, description,
+               regex, regex_action, timestamp, counter):
         
         try:
-            sql = '''UPDATE configuration SET enabled=?, plugin=?, source=?, 
-                                    destination=?, update_alert=?, 
-                                    update_interval=?, description=?, 
-                                    regexp=?, regexp_action=?, timestamp=?, 
-                                    counter=? WHERE id=?;'''
-        
-            self.conn.execute(sql,[enabled, plugin, source, str(destination_list),
-                               update_alert, update_interval, description, 
-                               str(regexp_list), str(regexp_action_list), 
-                               timestamp, counter, id])
-            self.conn.commit()
-            self.logger.info('The configuration has been updated: {} -> {}'.format(plugin, source))
+            query = """UPDATE configuration SET enabled=?, plugin=?, source=?, destination=?, update_alert=?, 
+                      update_interval=?, description=?, regexp=?, regexp_action=?, timestamp=?, counter=? WHERE id=?;"""
+
+            conn = sqlite3.connect(self.db)
+            conn.execute(query,[enabled, plugin, source, str(destination_list), update_alert, update_interval,
+                                description, str(regex), str(regex_action), timestamp, counter, id])
+            conn.commit()
+
+            self._logger(
+                "info",
+                "Configuration has been updated: {} -> {} -> {}".format(id, plugin, source)
+            )
+
         except Exception as error:
-            self.logger.error('Cannot update the configuration: {}'.format(error))
+            self._logger(
+                "error",
+                "Cannot update configuration: {} -> {}".format(id, error)
+            )
 
     def update_counter(self, id, count):
-        try:
-            sql = "UPDATE configuration SET counter = counter + '{}' WHERE id = '{}'".format(count, id)
-            self._sql(sql)
-        except Exception as error:
-            self.logger.error('Cannot update the counter for the configuration: {}'.format(error))
+        query = "UPDATE configuration SET counter = counter + '{}' WHERE id = '{}'".format(count, id)
+        results = self._sql_query(query)
+
+        if isinstance(results, list):
+            self._logger(
+                "debug",
+                "Configuration counter has been updated: {}".format(id)
+            )
+
+            return True
+
+        else:
+            self._logger(
+                "error",
+                "Cannot update configuration's counter: {}".format(id)
+            )
+
+            return False
  
     def update_timestamp(self, id, timestamp):
-        try:
-            sql = "UPDATE configuration SET timestamp = '{}' WHERE id = '{}'".format(timestamp, id)
-            self._sql(sql)
-        except Exception as error:
-            self.logger.error('Cannot update the timestamp for the configuration: {}'.format(error))
+        query = "UPDATE configuration SET timestamp = '{}' WHERE id = '{}'".format(timestamp, id)
+        results = self._sql_query(query)
 
+        if isinstance(results, list):
+            self._logger(
+                "debug",
+                "Configuration timestamp has been updated: {}".format(id)
+            )
 
+            return True
+
+        else:
+            self._logger(
+                "error",
+                "Cannot update configuration's timestamp: {}".format(id)
+            )
+
+            return False
