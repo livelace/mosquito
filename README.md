@@ -9,7 +9,7 @@
 * Support data sources: RSS, Twitter.
 * Support for a capture of image, HTML, text from a page.
 * Support regex (case insensitive) for content matching.
-* Support actions (if regex was found) for content processing.
+* Support actions (if regex was matched) for content processing.
 * Support an offline mode. Save data to a database if a SMTP server is not available.
 * Support update alerts and update intervals for configurations.
 

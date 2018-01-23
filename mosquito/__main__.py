@@ -522,7 +522,9 @@ class MosquitoParallelFetching(object):
 
         p = mp.Pool(pool_size)
         p.map(self._process_config, configs_with_queue)
+
         p.close()
+        lp.terminate()
 
 
 class Mosquito(object):
