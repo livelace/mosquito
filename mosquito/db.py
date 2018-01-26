@@ -239,10 +239,6 @@ class MosquitoDB(object):
         results = self._sql_query(query)
 
         if isinstance(results, list):
-            self._logger(
-                "debug",
-                "Configurations were retrieved: {}".format(len(results))
-            )
 
             return results
 

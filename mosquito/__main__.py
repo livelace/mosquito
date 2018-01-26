@@ -8,7 +8,6 @@ import eventlet
 import fcntl
 import logging
 import multiprocessing
-import pathos.multiprocessing as mp
 import os
 import re
 import requests
@@ -43,7 +42,7 @@ class MosquitoParallelFetching(object):
         self.force = force
 
         coloredlogs.install(level=self.settings.verbose)
-        self.logger = logging.getLogger('[PARALLEL]')
+        self.logger = logging.getLogger('[POOL]')
 
     def _check_regex(self, data, regexs, id, queue):
         """ Search patterns in data """
@@ -172,17 +171,18 @@ class MosquitoParallelFetching(object):
     def _grab_content(self, url, mode, id, queue):
         """ Grab data in different formats """
 
-        eventlet.monkey_patch(socket=True, select=True)
+        eventlet.monkey_patch()
 
         headers = {'User-Agent': self.settings.user_agent}
 
         if mode == 'html':
             with eventlet.Timeout(self.settings.grab_timeout):
                 try:
-                    body = requests.get(url, headers=headers)
-                    body = self._convert_encoding(body.content, id, queue)
+                    with requests.get(url, headers=headers) as r:
+                        body = self._convert_encoding(r.content, id, queue)
 
                     return body
+
                 except eventlet.timeout.Timeout:
                     queue.put([
                         id,
@@ -237,17 +237,17 @@ class MosquitoParallelFetching(object):
                 queue.put([
                     id,
                     "warning"
-                    "Cannot grab image from URL: {} -> {}".format(url, error)
+                    "Cannot grab image from URL: {}".format(url)
                 ])
 
         elif mode == 'text':
             with eventlet.Timeout(self.settings.grab_timeout):
                 try:
-                    page = requests.get(url, headers=headers)
-                    h2t = HTML2Text()
-                    h2t.body_width = 0
-                    h2t.ignore_emphasis = True
-                    text = h2t.handle(self._convert_encoding(page.content, id, queue))
+                    with requests.get(url, headers=headers) as r:
+                        h2t = HTML2Text()
+                        h2t.body_width = 0
+                        h2t.ignore_emphasis = True
+                        text = h2t.handle(self._convert_encoding(r.content, id, queue))
 
                     return text
 
@@ -269,7 +269,7 @@ class MosquitoParallelFetching(object):
                     queue.put([
                         id,
                         "warning",
-                        "Cannot grab text from URL: {} -> {}".format(url, error)
+                        "Cannot grab text from URL: {}".format(url)
                     ])
 
     def _logger(self, queue):
@@ -316,24 +316,15 @@ class MosquitoParallelFetching(object):
                 logger_queue.put([
                     config_id,
                     "info",
-                    "Processing a configuration: {} -> {} -> {}".format(
-                        config_id, config_plugin, config_url
-                    )
+                    "Working with configuration: {}".format(config_id)
                 ])
 
                 if config_plugin == 'rss':
-                    plugin_object = MosquitoRSS()
+                    plugin = MosquitoRSS(config_id, logger_queue)
                 elif config_plugin == 'twitter':
-                    plugin_object = MosquitoTwitter()
-                else:
-                    logger_queue.put([
-                        config_id,
-                        "warning",
-                        "Plugin isn't supported: {}".format(config_plugin)
-                    ])
-                    sys.exit(1)
+                    plugin = MosquitoTwitter(config_id, logger_queue)
 
-                messages = plugin_object.fetch(config_url)
+                messages = plugin.fetch(config_url)
 
                 count = 0
 
@@ -420,6 +411,9 @@ class MosquitoParallelFetching(object):
                                     elif mail_priority == 'low':
                                         mail_priority = '5'
 
+                                # Append message URL
+                                original_content = original_content + '\n\n---\n{}'.format(message_url)
+
                                 if not mail.send(
                                         config_destination, mail_headers, mail_priority, mail_subject,
                                         original_content, grabbed_html, grabbed_image, grabbed_text
@@ -427,7 +421,7 @@ class MosquitoParallelFetching(object):
                                     logger_queue.put([
                                         config_id,
                                         "warning",
-                                        "SMTP server is not available. Add messages to archive!"
+                                        "SMTP server is not available. Add message to archive!"
                                     ])
 
                                     db.add_archive(
@@ -437,9 +431,15 @@ class MosquitoParallelFetching(object):
                                     )
 
                             count += 1
+                    else:
+                        logger_queue.put([
+                            config_id,
+                            "debug",
+                            "The message timestamp is lower than the config timestamp, skipping: {} < {}".format(
+                                int(message_timestamp), int(config_timestamp))
+                        ])
 
                 if count > 0:
-
                     # Update timestamp for a configuration
                     db.update_timestamp(config_id, time.mktime(datetime.utcnow().timetuple()))
 
@@ -458,48 +458,36 @@ class MosquitoParallelFetching(object):
                         logger_queue.put([
                             config_id,
                             "warning",
-                            "No new data for the configuration: {} -> {} -> {}".format(
-                                config_id, config_plugin, config_url
-                            )
+                            "No new data for the configuration: {}".format(config_id)
                         ])
-
-                    else:
-                        logger_queue.put([
-                            config_id,
-                            "debug",
-                            "The message timestamp is lower than the config timestamp. Skipping: {} -> {}".format(
-                                message_timestamp, config_timestamp)
-                        ])
-
             else:
                 logger_queue.put([
                     config_id,
                     "info",
-                    "Update interval hasn't been reached. Skipping: {} -> {} -> {}".format(
-                        config_id, config_plugin, config_url
-                    )
+                    "Update interval hasn't been reached, skipping: {}".format(config_id)
                 ])
+
+                return False
+
         else:
             logger_queue.put([
                 config_id,
                 "info",
-                "Configuration is disabled, skipping: {} -> {} -> {}".format(
-                    config_id, config_plugin, config_url
-                )
+                "Configuration is disabled, skipping: {}".format(config_id)
             ])
+
+            return False
 
         logger_queue.put([
             config_id,
             "info",
-            "Configuration has been processed: {} -> {} -> {}".format(
-                config_id, config_plugin, config_url
-            )
+            "Configuration has been processed: {}".format(config_id)
         ])
 
-        # Wait until all logger messages will be processed
-        time.sleep(0.5)
+        return True
 
     def run(self, configs):
+        # ----------------------------------------------------------------------------
         m = multiprocessing.Manager()
         q = m.Queue()
 
@@ -507,10 +495,24 @@ class MosquitoParallelFetching(object):
         lp.daemon = True
         lp.start()
 
-        if len(configs) < self.settings.threads:
-            pool_size = len(configs)
+        # ----------------------------------------------------------------------------
+
+        configs_number = len(configs)
+
+        if configs_number < self.settings.threads:
+            pool_size = configs_number
         else:
             pool_size = self.settings.threads
+
+        self.logger.info("Process pool size: {}".format(pool_size))
+
+        # ----------------------------------------------------------------------------
+
+        chunk_size = int((configs_number / pool_size) + 1)
+
+        self.logger.info("Chunk size of the pool: {}".format(chunk_size))
+
+        # ----------------------------------------------------------------------------
 
         configs_with_queue = []
 
@@ -518,14 +520,21 @@ class MosquitoParallelFetching(object):
             config = config + (q,)
             configs_with_queue.append(config)
 
-        self.logger.info("Putting configurations to a process pool ...")
+        # ----------------------------------------------------------------------------
 
-        p = mp.Pool(pool_size)
-        p.map(self._process_config, configs_with_queue)
+        self.logger.info("Putting configurations to the process pool: {}".format(configs_number))
+
+        p = multiprocessing.Pool(pool_size)
+        results = p.map(self._process_config, configs_with_queue, chunk_size)
 
         p.close()
+        p.join()
         lp.terminate()
 
+        # ----------------------------------------------------------------------------
+
+        self.logger.info("Number of processed configurations: {}".format(results.count(True)))
+        self.logger.info("Number of skipped configurations: {}".format(results.count(False)))
 
 class Mosquito(object):
 
@@ -874,6 +883,8 @@ class Mosquito(object):
         configs = list(set(configs))
 
         if configs:
+            self.logger.debug("Configurations were retrieved: {}".format(len(configs)))
+
             pf = MosquitoParallelFetching(args.force, self.settings)
             pf.run(configs)
         else:
