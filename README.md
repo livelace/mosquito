@@ -70,6 +70,9 @@ destination = user@example.com
 # Amount of time (in seconds) for an entire connection to a source.
 grab_timeout = 60
 
+# Process pool which will process configurations.
+pool = 4
+
 # Set default regex and regex action. Support a space separated list for both parameters.
 regex = .*
 regex_action = subject=Mosquito:
