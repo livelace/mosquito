@@ -7,6 +7,7 @@ import os
 import sys
 import configparser
 
+
 class MosquitoSettings(object):
     
     def __init__(self):
@@ -22,13 +23,15 @@ class MosquitoSettings(object):
         
         settings = configparser.RawConfigParser(
             {
+                'attachment_mime': 'logstash',
                 'attachment_name': 'mosquito',
                 'destination': None,
                 'firefox_path': '/usr/bin/firefox',
                 'geckodriver_path': '/usr/local/bin/geckodriver',
                 'grab_timeout': 60,
                 'lock_file': '/tmp/mosquito.lock',
-                'mime': 'logstash',
+                'regex': '.*',
+                'regex_action': 'subject=Mosquito:',
                 'smtp_server': 'localhost',
                 'smtp_port': 25,
                 'smtp_usessl': 'False',
@@ -37,7 +40,7 @@ class MosquitoSettings(object):
                 'smtp_username': None,
                 'smtp_password': None,
                 'subject_length': 100,
-                'threads': 2,
+                'pool': 2,
                 'update_alert': '7d',
                 'update_interval': '15m',
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36',
@@ -53,11 +56,13 @@ class MosquitoSettings(object):
             if self.destination:
                 self.destination = self.destination.split(',')
                 self.destination = [x.strip(' ') for x in self.destination]
-                
+
+            self.attachment_mime = settings.get('main', 'attachment_mime')
             self.attachment_name = settings.get('main', 'attachment_name')
             self.grab_timeout = int(settings.get('main', 'grab_timeout'))
             self.lock_file = settings.get('main', 'lock_file')
-            self.mime = settings.get('main', 'mime')
+            self.regex = settings.get('main', 'regex').split()
+            self.regex_action = settings.get('main', 'regex_action').split()
             self.smtp_server = settings.get('main', 'smtp_server')
             self.smtp_port = int(settings.get('main', 'smtp_port'))
             self.smtp_usessl = settings.getboolean('main', 'smtp_usessl')
@@ -66,7 +71,7 @@ class MosquitoSettings(object):
             self.smtp_username = settings.get('main', 'smtp_username')
             self.smtp_password = settings.get('main', 'smtp_password')
             self.subject_length = int(settings.get('main', 'subject_length'))
-            self.threads = int(settings.get('main', 'threads'))
+            self.pool = int(settings.get('main', 'pool'))
             self.update_alert = settings.get('main', 'update_alert')
             self.update_interval = settings.get('main', 'update_interval')
             self.user_agent = settings.get('main', 'user_agent')

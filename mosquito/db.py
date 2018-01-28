@@ -279,27 +279,27 @@ class MosquitoDB(object):
 
             return False
 
-    def update(self, id, enabled, plugin, source, destination_list, update_alert, update_interval, description,
+    def update(self, id, enabled, plugin, source, destination, update_alert, update_interval, description,
                regex, regex_action, timestamp, counter):
-        
+
         try:
             query = """UPDATE configuration SET enabled=?, plugin=?, source=?, destination=?, update_alert=?, 
                       update_interval=?, description=?, regexp=?, regexp_action=?, timestamp=?, counter=? WHERE id=?;"""
 
             conn = sqlite3.connect(self.db)
-            conn.execute(query,[enabled, plugin, source, str(destination_list), update_alert, update_interval,
+            conn.execute(query,[enabled, plugin, source, str(destination), update_alert, update_interval,
                                 description, str(regex), str(regex_action), timestamp, counter, id])
             conn.commit()
 
             self._logger(
                 "info",
-                "Configuration has been updated: {} -> {} -> {}".format(id, plugin, source)
+                "Configuration has been updated: {}".format(id)
             )
 
         except Exception as error:
             self._logger(
                 "error",
-                "Cannot update configuration: {} -> {}".format(id, error)
+                "Cannot update configuration: {}".format(id)
             )
 
     def update_counter(self, id, count):

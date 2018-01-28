@@ -5,13 +5,14 @@
 
 ### Main features:
 
-* Work in parallel. Each configuration works in a separate process (Python [multiproccessing](https://docs.python.org/3/library/multiprocessing.html)).
+* Work in parallel. Configurations are splitted into a process pool (Python [multiproccessing](https://docs.python.org/3/library/multiprocessing.html)).
 * Support data sources: RSS, Twitter.
 * Support for a capture of image, HTML, text from a page.
 * Support regex (case insensitive) for content matching.
 * Support actions (if regex was matched) for content processing.
 * Support an offline mode. Save data to a database if a SMTP server is not available.
 * Support update alerts and update intervals for configurations.
+* Support encoding detection and transformation (default to UTF-8).
 
 ### Available actions:
 
@@ -59,17 +60,19 @@
 ```
 [main]
 
-# Base prefix for attachments.
+# Set custom mime type and name for attachments. It could be need for ELK imap plugin, for instance :)
+attachment_mime = logstash
 attachment_name = mosquito
 
 # Destination by default.
 destination = user@example.com
 
-# Amount of time (seconds) for an entire connection.
+# Amount of time (in seconds) for an entire connection to a source.
 grab_timeout = 60
 
-# Set custom mime type for attachements. It could be need for ELK imap plugin, for instance :)
-mime = logstash
+# Set default regex and regex action. Support a space separated list for both parameters.
+regex = .*
+regex_action = subject=Mosquito:
 
 # Email settings.
 smtp_server = mail.example.com

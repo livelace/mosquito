@@ -141,7 +141,7 @@ class MosquitoMail(object):
 
                     # Add expanded html
                     if grabbed_html:
-                        html = MIMEText(grabbed_html, self.settings.mime)
+                        html = MIMEText(grabbed_html, self.settings.attachment_mime)
                         html.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.html')
                         msg.attach(html)
 
@@ -153,7 +153,7 @@ class MosquitoMail(object):
 
                     # Add expanded text
                     if grabber_text:
-                        text = MIMEText(grabber_text, self.settings.mime)
+                        text = MIMEText(grabber_text, self.settings.attachment_mime)
                         text.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.txt')
                         text.set_charset('utf-8')
                         msg.attach(text)

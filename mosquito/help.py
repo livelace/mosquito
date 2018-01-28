@@ -30,9 +30,9 @@ class MosquitoHelp(object):
         self.list3 = "Set a space separated list of IDs"
 
         self.set1 = "Set parameters for configurations"
-        self.set2 = "Set a space separated list of IDs"
-        self.set3 = "Set status of a configuration (True or False)"
-        self.set4 = "Set a plugin name for a source (rss, twitter)"
+        self.set2 = "Set status of a configuration (True or False)"
+        self.set3 = "Set a space separated list of IDs"
+        self.set4 = "Set a space separated list of plugins"
         self.set5 = "Set an URL for RSS or a channel name for Twitter"
         self.set6 = "Set a space separated list of email addresses"
         self.set7 = "Set an update alert interval (1s, 2m, 3h, 4d)"

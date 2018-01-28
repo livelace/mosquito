@@ -44,55 +44,21 @@ class MosquitoParallelFetching(object):
         coloredlogs.install(level=self.settings.verbose)
         self.logger = logging.getLogger('[POOL]')
 
-    def _check_regex(self, data, regexs, id, queue):
-        """ Search patterns in data """
-
-        if regexs:
-            regex_found = False
-
-            for regex in regexs:
-                pattern = re.compile(regex,re.IGNORECASE + re.UNICODE)
-
-                if re.search(pattern, data):
-                    regex_found = True
-                    queue.put([
-                        id,
-                        "debug",
-                        "Regex was matched: {}".format(regex)
-                    ])
-                else:
-                    queue.put([
-                        id,
-                        "debug",
-                        "Regex wasn't matched: {}".format(regex)
-                    ])
-
-            if regex_found:
-                queue.put([
-                    id,
-                    "debug",
-                    "Regex was found: {}".format(regex)
-                ])
-
-            return regex_found
-        else:
-            print("Regexp list is empty!")
-            return False
-
-    def _convert_encoding(self, data, id, queue, new_coding='UTF-8'):
+    def _convert_encoding(self, data, id, queue, new_encoding='UTF-8'):
         """ Detect encoding and convert it to UTF-8 """
 
         encoding = chardet.detect(data)['encoding']
+
         queue.put([
             id,
             "debug",
             "Detected encoding: {}".format(encoding)
         ])
 
-        if new_coding.upper() != encoding.upper():
-            data = data.decode(encoding, data)
+        if encoding.upper() != new_encoding.upper():
+            data = data.decode(encoding, new_encoding)
         else:
-            data = data.decode(new_coding)
+            data = data.decode()
 
         return data
 
@@ -237,7 +203,7 @@ class MosquitoParallelFetching(object):
                 queue.put([
                     id,
                     "warning"
-                    "Cannot grab image from URL: {}".format(url)
+                    "Cannot grab image from URL: {} -> {}".format(url, error)
                 ])
 
         elif mode == 'text':
@@ -247,7 +213,10 @@ class MosquitoParallelFetching(object):
                         h2t = HTML2Text()
                         h2t.body_width = 0
                         h2t.ignore_emphasis = True
-                        text = h2t.handle(self._convert_encoding(r.content, id, queue))
+                        #h2t.ignore_images = True
+
+                        text = self._convert_encoding(r.content, id, queue)
+                        text = h2t.handle(text)
 
                     return text
 
@@ -269,7 +238,7 @@ class MosquitoParallelFetching(object):
                     queue.put([
                         id,
                         "warning",
-                        "Cannot grab text from URL: {}".format(url)
+                        "Cannot grab text from URL: {} -> {}".format(url, error)
                     ])
 
     def _logger(self, queue):
@@ -292,6 +261,48 @@ class MosquitoParallelFetching(object):
                     self.logger.info(message)
                 elif level == "warning":
                     self.logger.warning(message)
+
+    def _match_regex(self, data, regexs, id, queue):
+        """ Search patterns in data """
+
+        if regexs:
+            regex_found = False
+
+            for regex in regexs:
+                pattern = re.compile(regex,re.IGNORECASE + re.UNICODE)
+
+                if re.search(pattern, data):
+                    regex_found = True
+                    queue.put([
+                        id,
+                        "debug",
+                        "Regex was matched: {}".format(regex)
+                    ])
+                else:
+                    queue.put([
+                        id,
+                        "debug",
+                        "Regex wasn't matched: {}".format(regex)
+                    ])
+
+            if regex_found:
+                queue.put([
+                    id,
+                    "debug",
+                    "Content was matched"
+                ])
+            else:
+                if regex_found:
+                    queue.put([
+                        id,
+                        "debug",
+                        "Content wasn't matched"
+                    ])
+
+            return regex_found
+        else:
+            print("Regexp list is empty!")
+            return False
 
     def _process_config(self, config):
         config_id = config[0]
@@ -334,7 +345,7 @@ class MosquitoParallelFetching(object):
                     original_content = message[1]
 
                     if message_timestamp > config_timestamp:
-                        if self._check_regex(original_content, config_regex, config_id, logger_queue):
+                        if self._match_regex(original_content, config_regex, config_id, logger_queue):
                             grabs = []
 
                             execute = None
@@ -499,10 +510,10 @@ class MosquitoParallelFetching(object):
 
         configs_number = len(configs)
 
-        if configs_number < self.settings.threads:
+        if configs_number < self.settings.pool:
             pool_size = configs_number
         else:
-            pool_size = self.settings.threads
+            pool_size = self.settings.pool
 
         self.logger.info("Process pool size: {}".format(pool_size))
 
@@ -535,6 +546,7 @@ class MosquitoParallelFetching(object):
 
         self.logger.info("Number of processed configurations: {}".format(results.count(True)))
         self.logger.info("Number of skipped configurations: {}".format(results.count(False)))
+
 
 class Mosquito(object):
 
@@ -579,8 +591,8 @@ class Mosquito(object):
         parser_create.add_argument('--update-alert', default=self.settings.update_alert, help=self.help.create5)
         parser_create.add_argument('--update-interval', default=self.settings.update_interval, help=self.help.create6)
         parser_create.add_argument('--description', nargs='+', help=self.help.create7)
-        parser_create.add_argument('--regex', nargs='+', default='.*', help=self.help.create8)
-        parser_create.add_argument('--regex-action', required=True, nargs='+', help=self.help.create9)
+        parser_create.add_argument('--regex', nargs='+', default=self.settings.regex, help=self.help.create8)
+        parser_create.add_argument('--regex-action', nargs='+', default=self.settings.regex_action, help=self.help.create9)
         parser_create.set_defaults(func=self.create)
 
         # Create 'delete' parser
@@ -605,167 +617,25 @@ class Mosquito(object):
 
         # Create 'set' parser
         parser_set = subparsers.add_parser('set', help=self.help.set1)
-        parser_set.add_argument('--id', required=True, nargs='+', help=self.help.set2)
-        parser_set.add_argument('--enabled', help=self.help.set3)
-        parser_set.add_argument('--plugin', help=self.help.set4)
+        parser_set.add_argument('--enabled', help=self.help.set2)
+        parser_set.add_argument('--id', nargs='+', help=self.help.set3)
+        parser_set.add_argument('--plugin', nargs='+', help=self.help.set4)
         parser_set.add_argument('--source', help=self.help.set5)
         parser_set.add_argument('--destination', nargs='+', help=self.help.set6)
         parser_set.add_argument('--update-alert', help=self.help.set7)
         parser_set.add_argument('--update-interval', help=self.help.set8)
         parser_set.add_argument('--description', nargs='+', help=self.help.set9)
-        parser_set.add_argument('--regexp', nargs='+', help=self.help.set10)
-        parser_set.add_argument('--regexp-action', nargs='+', help=self.help.set11)
+        parser_set.add_argument('--regex', nargs='+', help=self.help.set10)
+        parser_set.add_argument('--regex-action', nargs='+', help=self.help.set11)
         parser_set.set_defaults(func=self.set)
 
         args = parser.parse_args()
 
-        try:
-            args.func(args)
-        except AttributeError:
-            parser.print_help()
-            sys.exit(0)
-
-    def _check_action(self, value):
-        """
-        Validate actions types:
-        "execute" - execute script if data matches
-        "grab" - fetch data in different formats
-        "header" - add a header to an email
-        "priority" - set priority for an email
-        "subject" - set subject for an email
-        """
-
-        if value:
-            action_type = value.split('=')[0]
-            
-            if action_type == 'execute':
-                try:
-                    script_path = value.split('=')[1]
-                    if not script_path:
-                        raise Exception
-                except Exception:
-                    self.logger.error("Action 'execute' must have a value (execute=/path/to/script)")
-                    sys.exit(1)
-
-            elif action_type == 'grab':
-                try:
-                    grab_content = value.split('=')[1]
-                    if grab_content != 'full' and grab_content != 'html' and grab_content != 'image' and grab_content != 'text':
-                        raise Exception
-                except Exception:
-                    self.logger.error("Action 'grab' must have a value (grab=text)")
-                    sys.exit(1)
-
-            elif action_type == 'header':
-                try:
-                    header_name = value.split('=')[1].split(':')[0]
-                    header_value = value.split('=')[1].split(':')[1]
-                    if not header_name or not header_value:
-                        raise Exception
-                except Exception:
-                    self.logger.error("Action 'header' must have a value (header=X-custom-header:value)")
-                    sys.exit(1)
-
-            elif action_type == 'priority':
-                try:
-                    priority_type = value.split('=')[1]
-                    if priority_type != 'high' and priority_type != 'normal' and priority_type != 'low':
-                        raise Exception
-                except Exception:
-                    self.logger.error("Action 'priority' must have a value (priority=low)")
-                    sys.exit(1)
-            elif action_type == 'subject':
-                try:
-                    subject_text = value.split('=')[1]
-                    if not subject_text:
-                        raise Exception
-                except Exception:
-                    self.logger.error("Action 'subject' must have a value (subject=FooBar)")
-                    sys.exit(1)
-            else:
-                self.logger.error("Action type doesn't exist: {}".format(action_type))
-                sys.exit(1)
-                
-        return value
-
-    def _check_confirmation(self, question):
-        """ Ask user confirmation """
-
-        sys.stdout.write('%s [y/n]: ' % question)
-
-        while True:
-            try:
-                return strtobool(input().lower())
-            except ValueError:
-                sys.stdout.write('Please respond with \'y\' or \'n\'.\n')
-        
-    def _check_description(self, data):
-        """ Transform quotes in description """
-
-        if data:
-            data = ' '.join(data)
-            data = data.replace('"', '')
-            data = data.replace("'", "")
-
-            return data
-    
-    def _check_destination(self, emails):
-        """ Validate destination emails """
-
-        if emails:
-            emails_valid = []
-
-            for email in emails:
-                if not validators.email(email):
-                    self.logger.error("Destination must be a valid email: {}".format(email))
-                else:
-                    emails_valid.append(email)
-                
-            if len(emails_valid) > 0:
-                return emails_valid
-
-            else:
-                self.logger.error("There are no valid destination emails!")
-                sys.exit(1)
-
-    def _check_interval(self, interval):
-        """
-        Validate time types:
-        "s" - seconds
-        "m" - minutes
-        "h" - hours
-        "d" - days
-        """
-
-        if interval:
-            if re.match('^[0-9]+[smhd]', interval):
-                if interval.endswith('s'):
-                    return interval[:-1]
-
-                elif interval.endswith('m'):
-                    return int(interval[:-1])*60
-
-                elif interval.endswith('h'):
-                    return int(interval[:-1])*60*60
-
-                elif interval.endswith('d'):
-                    return int(interval[:-1])*60*60*24
-
-            elif interval.isdigit():
-                return interval
-            else:
-                self.logger.error("Time interval must be a digit or a digit with suffix: {}".format(interval))
-                sys.exit(1)
-    
-    def _check_plugin(self, plugin):
-        """ Supported plugins """
-
-        if plugin:
-            if plugin in self.plugins:
-                return plugin
-            else:
-                self.logger.error("Plugin isn't supported: {}".format(plugin))
-                sys.exit(1)
+        #try:
+        args.func(args)
+        #except AttributeError:
+        #    parser.print_help()
+        #    sys.exit(0)
 
     def _human_time(self, seconds):
         """ Convert seconds to human time """
@@ -805,22 +675,190 @@ class Mosquito(object):
 
                     self.logger.warning('Archived records are sending ...')
                     self.db.delete_archive(id)
-     
+
+    def _validate_action(self, value):
+        """
+        Validate actions types:
+        "execute" - execute script if data matches
+        "grab" - fetch data in different formats
+        "header" - add a header to an email
+        "priority" - set priority for an email
+        "subject" - set subject for an email
+        """
+
+        if value:
+            action_type = value.split('=')[0]
+
+            if action_type == 'execute':
+                try:
+                    script_path = value.split('=')[1]
+                    if not script_path:
+                        raise Exception
+
+                except Exception:
+                    self.logger.error("Action 'execute' must have a value (execute=/path/to/script)")
+                    sys.exit(1)
+
+            elif action_type == 'grab':
+                try:
+                    grab_content = value.split('=')[1]
+                    if grab_content != 'full' and grab_content != 'html' and grab_content != 'image' and grab_content != 'text':
+                        raise Exception
+
+                except Exception:
+                    self.logger.error("Action 'grab' must have a value (grab=text)")
+                    sys.exit(1)
+
+            elif action_type == 'header':
+                try:
+                    header_name = value.split('=')[1].split(':')[0]
+                    header_value = value.split('=')[1].split(':')[1]
+                    if not header_name or not header_value:
+                        raise Exception
+
+                except Exception:
+                    self.logger.error("Action 'header' must have a value (header=X-custom-header:value)")
+                    sys.exit(1)
+
+            elif action_type == 'priority':
+                try:
+                    priority_type = value.split('=')[1]
+                    if priority_type != 'high' and priority_type != 'normal' and priority_type != 'low':
+                        raise Exception
+
+                except Exception:
+                    self.logger.error("Action 'priority' must have a value (priority=low)")
+                    sys.exit(1)
+            elif action_type == 'subject':
+                try:
+                    subject_text = value.split('=')[1]
+                    if not subject_text:
+                        raise Exception
+                except Exception:
+                    self.logger.error("Action 'subject' must have a value (subject=FooBar)")
+                    sys.exit(1)
+            else:
+                self.logger.error("Action type doesn't exist: {}".format(action_type))
+                sys.exit(1)
+
+        return value
+
+    def _validate_confirmation(self, question):
+        """ Ask user confirmation """
+
+        sys.stdout.write('%s [y/n]: ' % question)
+
+        while True:
+            try:
+                return strtobool(input().lower())
+            except ValueError:
+                sys.stdout.write('Please respond with \'y\' or \'n\'.\n')
+
+    def _validate_description(self, data):
+        """ Transform quotes in description """
+
+        if data:
+            data = ' '.join(data)
+            data = data.replace('"', '')
+            data = data.replace("'", "")
+
+            return data
+
+    def _validate_destination(self, emails):
+        """ Validate destination emails """
+
+        if emails:
+            emails_valid = []
+
+            for email in emails:
+                if not validators.email(email):
+                    self.logger.error("Destination must be a valid email: {}".format(email))
+                else:
+                    emails_valid.append(email)
+
+            if len(emails_valid) > 0:
+                return emails_valid
+
+            else:
+                self.logger.error("There are no valid destination emails!")
+                sys.exit(1)
+        else:
+            self.logger.error("There are no valid destination emails!")
+            sys.exit(1)
+
+    def _validate_interval(self, interval):
+        """
+        Validate time types:
+        "s" - seconds
+        "m" - minutes
+        "h" - hours
+        "d" - days
+        """
+
+        if interval:
+            if re.match('^[0-9]+[smhd]', interval):
+                if interval.endswith('s'):
+                    return interval[:-1]
+
+                elif interval.endswith('m'):
+                    return int(interval[:-1]) * 60
+
+                elif interval.endswith('h'):
+                    return int(interval[:-1]) * 60 * 60
+
+                elif interval.endswith('d'):
+                    return int(interval[:-1]) * 60 * 60 * 24
+
+            elif interval.isdigit():
+                return interval
+            else:
+                self.logger.error("Time interval must be a digit or a digit with suffix: {}".format(interval))
+                sys.exit(1)
+
+    def _validate_plugin(self, plugin):
+        """ Supported plugins """
+
+        plugin_status = True
+
+        # ------------------------------------------------------------------------
+
+        if isinstance(plugin, str):
+            if plugin not in self.plugins:
+                plugin_status = False
+        elif isinstance(plugin, list):
+            for item in plugin:
+                if item not in self.plugins:
+                    plugin_status = False
+        else:
+            plugin_status = False
+
+        # ------------------------------------------------------------------------
+
+        if plugin_status:
+            return plugin
+        else:
+            if isinstance(plugin, str):
+                self.logger.error("Unsupported plugins detected: {}".format(plugin))
+            elif isinstance(plugin, list):
+                self.logger.error("Unsupported plugins detected: {}".format(' '.join(str(i) for i in plugin)))
+
+            sys.exit(1)
+
     def create(self, args):
         """ Create a configuration """
 
-        plugin = self._check_plugin(args.plugin)
+        plugin = self._validate_plugin(args.plugin)
         source = args.source
-        destination = self._check_destination(args.destination)
-        update_alert = self._check_interval(args.update_alert)
-        update_interval = self._check_interval(args.update_interval)
-        description = self._check_description(args.description)
+        destination = self._validate_destination(args.destination)
+        update_alert = self._validate_interval(args.update_alert)
+        update_interval = self._validate_interval(args.update_interval)
+        description = self._validate_description(args.description)
         regex = args.regex
         regex_action = args.regex_action
 
         if regex_action:
             for action in regex_action:
-                self._check_action(action)
+                self._validate_action(action)
 
         self.db.create(
             'True', plugin, source, destination, update_alert, update_interval, description, regex, regex_action,
@@ -840,13 +878,13 @@ class Mosquito(object):
                     'All configurations for a specific plugin have been selected for deletion: {}'.format(plugin)
                 )
 
-                if self._check_confirmation('Please, confirm plugin deletion'):
+                if self._validate_confirmation('Please, confirm plugin deletion'):
                     self.db.delete(plugin, None)
 
         if args.id:
             self.logger.info('IDs have been selected for deletion: {}'.format(' '.join(str(i) for i in args.id)))
 
-            if self._check_confirmation('Please, confirm ID deletion'):
+            if self._validate_confirmation('Please, confirm ID deletion'):
                 for id in args.id:
                     self.db.delete(None, id)
 
@@ -900,8 +938,8 @@ class Mosquito(object):
         """ List configurations """
 
         table = [[
-                  'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 'Alert', 'Interval', 'Desc', 'Regexp',
-                  'Regexp action', 'Last update', 'Count'
+                  'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 'Alert', 'Interval', 'Desc', 'Regex',
+                  'Regex action', 'Last update', 'Count'
                 ]]
 
         configs = []
@@ -952,61 +990,91 @@ class Mosquito(object):
     def set(self, args):
         """ Set parameters for configurations """
 
-        ids = args.id
+        id = args.id
         enabled = args.enabled
-        plugin = self._check_plugin(args.plugin)
+        plugin = self._validate_plugin(args.plugin)
         source = args.source
-        destination = self._check_destination(args.destination)
-        update_alert = self._check_interval(args.update_alert)
-        update_interval = self._check_interval(args.update_interval)
-        description = self._check_description(args.description)
-        regexp = args.regexp
-        regexp_action = args.regexp_action
+        destination = self._validate_destination(args.destination)
+        update_alert = self._validate_interval(args.update_alert)
+        update_interval = self._validate_interval(args.update_interval)
+        description = self._validate_description(args.description)
+        regex = args.regex
+        regex_action = self._validate_action(args.regex_action)
 
-        if regexp_action:
-            for action in regexp_action:
-                self._check_action(action)
-            
-        for id in ids:
-            config_data = self.db.list("all", id)
-            
-            if enabled != 'True' and enabled != 'False':
-                enabled = config_data[0][1]
-                
-            if not plugin:
-                plugin = config_data[0][2]
-                
-            if not source:
-                source = config_data[0][3]
-                timestamp = config_data[0][10]
-                counter = config_data[0][11]
-            else:
-                timestamp = 0
-                counter = 0
-                
-            if not destination:
-                destination = config_data[0][4]
-                
-            if not update_alert:
-                update_alert = config_data[0][5]
-                
-            if not update_interval:
-                update_interval = config_data[0][6]
-                
-            if not description:
-                description = config_data[0][7]
-                
-            if not regexp:
-                regexp = config_data[0][8]
-                
-            if not regexp_action:
-                regexp_action = config_data[0][9]
-        
-            self.db.update(
-                id, enabled, plugin, source, destination, update_alert, update_interval, description, regexp,
-                regexp_action, timestamp, counter
-            )
+        configs = []
 
+        if not args.plugin and not args.id:
+            self.logger.error("You must choose --id and/or --plugin parameters")
+            sys.exit(1)
+
+        elif args.plugin and not args.id:
+            for plugin in args.plugin:
+                configs = configs + self.db.list(plugin, 'all')
+
+        elif not args.plugin and args.id:
+            for id in args.id:
+                configs = configs + self.db.list('all', id)
+
+        elif args.plugin and args.id:
+            for plugin in args.plugin:
+                configs = configs + self.db.list(plugin, 'all')
+            for id in args.id:
+                configs = configs + self.db.list('all', id)
+
+        configs = sorted(list(set(configs)))
+
+        if configs:
+            if self._validate_confirmation('Please, confirm configurations changes'):
+                for config in configs:
+                    config_id = config[0]
+
+                    if enabled != "True" and enabled != "False":
+                        config_enabled = config[1]
+
+                    if source:
+                        config_source = source
+                    else:
+                        config_source = config[3]
+
+                    if destination:
+                        config_destination = destination
+                    else:
+                        config_destination = config[4]
+
+                    if update_alert:
+                        config_update_alert = update_alert
+                    else:
+                        config_update_alert = config[5]
+
+                    if update_interval:
+                        config_update_interval = update_interval
+                    else:
+                        config_update_interval = config[6]
+
+                    if description:
+                        config_description = description
+                    else:
+                        config_description = config[7]
+
+                    if regex:
+                        config_regex = regex
+                    else:
+                        config_regex = config[8]
+
+                    if regex_action:
+                        config_regex_action = regex_action
+                    else:
+                        config_regex_action = config[9]
+
+                    config_plugin = config[2]
+                    config_timestamp = config[10]
+                    config_counter = config[11]
+
+                    self.db.update(
+                        config_id, config_enabled, config_plugin, config_source, config_destination, config_update_alert,
+                        config_update_interval, config_description, config_regex, config_regex_action, config_timestamp,
+                        config_counter
+                    )
 
 def main():
     Mosquito()
