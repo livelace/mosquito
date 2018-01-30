@@ -32,7 +32,8 @@ class MosquitoDB(object):
                                                 regexp TEXT,
                                                 regexp_action TEXT,
                                                 timestamp INTEGER NOT NULL,
-                                                counter INTEGER
+                                                counter INTEGER,
+                                                alert_timestamp INTEGER NOT NULL
                     )
                     """
                 )
@@ -131,19 +132,19 @@ class MosquitoDB(object):
             )
         
     def create(self, enabled, plugin, source, destination, update_alert, update_interval, description, regex,
-               regex_action, timestamp, counter):
+               regex_action, timestamp, counter, alert_timestamp):
         
         try:
             sql = """INSERT INTO configuration (
                                                 enabled, plugin, source, destination, 
                                                 update_alert, update_interval, 
                                                 description, regexp, regexp_action, 
-                                                timestamp, counter
-                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?);"""
+                                                timestamp, counter, alert_timestamp
+                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?);"""
 
             conn = sqlite3.connect(self.db)
             conn.execute(sql, [enabled, plugin, source, str(destination), update_alert, update_interval, description,
-                               str(regex), str(regex_action), timestamp, counter])
+                               str(regex), str(regex_action), timestamp, counter, alert_timestamp])
             conn.commit()
 
             self._logger(
@@ -280,15 +281,16 @@ class MosquitoDB(object):
             return False
 
     def update(self, id, enabled, plugin, source, destination, update_alert, update_interval, description,
-               regex, regex_action, timestamp, counter):
+               regex, regex_action, timestamp, counter, alert_timestamp):
 
         try:
             query = """UPDATE configuration SET enabled=?, plugin=?, source=?, destination=?, update_alert=?, 
-                      update_interval=?, description=?, regexp=?, regexp_action=?, timestamp=?, counter=? WHERE id=?;"""
+                      update_interval=?, description=?, regexp=?, regexp_action=?, timestamp=?, counter=?,
+                       alert_timestamp=? WHERE id=?;"""
 
             conn = sqlite3.connect(self.db)
             conn.execute(query,[enabled, plugin, source, str(destination), update_alert, update_interval,
-                                description, str(regex), str(regex_action), timestamp, counter, id])
+                                description, str(regex), str(regex_action), timestamp, counter, alert_timestamp, id])
             conn.commit()
 
             self._logger(
@@ -338,6 +340,26 @@ class MosquitoDB(object):
             self._logger(
                 "error",
                 "Cannot update configuration's timestamp: {}".format(id)
+            )
+
+            return False
+
+    def update_alert_timestamp(self, id, timestamp):
+        query = "UPDATE configuration SET alert_timestamp = '{}' WHERE id = '{}'".format(timestamp, id)
+        results = self._sql_query(query)
+
+        if isinstance(results, list):
+            self._logger(
+                "debug",
+                "Alert timestamp has been updated: {}".format(id)
+            )
+
+            return True
+
+        else:
+            self._logger(
+                "error",
+                "Cannot update alert's timestamp: {}".format(id)
             )
 
             return False

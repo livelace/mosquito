@@ -144,7 +144,7 @@ class MosquitoParallelFetching(object):
         if mode == 'html':
             with eventlet.Timeout(self.settings.grab_timeout):
                 try:
-                    with requests.get(url, headers=headers) as r:
+                    with requests.get(url, headers=headers, verify=ast.literal_eval(self.settings.check_ssl)) as r:
                         body = self._convert_encoding(r.content, id, queue)
 
                     return body
@@ -209,7 +209,7 @@ class MosquitoParallelFetching(object):
         elif mode == 'text':
             with eventlet.Timeout(self.settings.grab_timeout):
                 try:
-                    with requests.get(url, headers=headers) as r:
+                    with requests.get(url, headers=headers, verify=ast.literal_eval(self.settings.check_ssl)) as r:
                         h2t = HTML2Text()
                         h2t.body_width = 0
                         h2t.ignore_emphasis = True
@@ -315,8 +315,9 @@ class MosquitoParallelFetching(object):
         config_regex = ast.literal_eval(config[8])
         config_regex_action = ast.literal_eval(config[9])
         config_timestamp = config[10]
+        config_alert_timestamp = config[12]
         current_timestamp = time.mktime(datetime.utcnow().timetuple())
-        logger_queue = config[12]
+        logger_queue = config[13]
 
         db = MosquitoDB(config_id, logger_queue)
         mail = MosquitoMail(config_id, logger_queue)
@@ -459,18 +460,27 @@ class MosquitoParallelFetching(object):
                 else:
                     # Check if we haven't received the new data during a specific interval
                     if current_timestamp > (config_timestamp + int(config_update_alert)):
-                        mail.send(
-                            config_destination, None, None,
-                            '***No new data from the configuration***',
-                            '{} -> {} -> {}'.format(
-                                config_id, config_plugin, config_url), None, None, None
-                        )
-
                         logger_queue.put([
                             config_id,
                             "warning",
                             "No new data for the configuration: {}".format(config_id)
                         ])
+
+                        # Check if we are reached "alert_interval". If so, send a letter.
+                        if current_timestamp > (int(config_alert_timestamp) + self._validate_interval(self.settings.alert_interval)):
+                            logger_queue.put([
+                                config_id,
+                                "warning",
+                                "Alert interval reached. Sending an alert email: {}".format(config_id)
+                            ])
+
+                            if mail.send(
+                                config_destination, None, None, self.settings.alert_subject,
+                                '{} -> {} -> {}'.format(
+                                    config_id, config_plugin, config_url
+                                ), None, None, None
+                            ):
+                                db.update_alert_timestamp(config_id, current_timestamp)
             else:
                 logger_queue.put([
                     config_id,
@@ -496,6 +506,35 @@ class MosquitoParallelFetching(object):
         ])
 
         return True
+
+    def _validate_interval(self, interval):
+        """
+        Validate time types:
+        "s" - seconds
+        "m" - minutes
+        "h" - hours
+        "d" - days
+        """
+
+        if interval:
+            if re.match('^[0-9]+[smhd]', interval):
+                if interval.endswith('s'):
+                    return int(interval[:-1])
+
+                elif interval.endswith('m'):
+                    return int(interval[:-1]) * 60
+
+                elif interval.endswith('h'):
+                    return int(interval[:-1]) * 60 * 60
+
+                elif interval.endswith('d'):
+                    return int(interval[:-1]) * 60 * 60 * 24
+
+            elif interval.isdigit():
+                return interval
+            else:
+                self.logger.error("Time interval must be a digit or a digit with suffix: {}".format(interval))
+                sys.exit(1)
 
     def run(self, configs):
         # ----------------------------------------------------------------------------
@@ -632,11 +671,11 @@ class Mosquito(object):
 
         args = parser.parse_args()
 
-        try:
-            args.func(args)
-        except AttributeError:
-            parser.print_help()
-            sys.exit(0)
+        #try:
+        args.func(args)
+        #except AttributeError:
+        #    parser.print_help()
+        #    sys.exit(0)
 
     def _human_time(self, seconds):
         """ Convert seconds to human time """
@@ -796,7 +835,7 @@ class Mosquito(object):
         if interval:
             if re.match('^[0-9]+[smhd]', interval):
                 if interval.endswith('s'):
-                    return interval[:-1]
+                    return int(interval[:-1])
 
                 elif interval.endswith('m'):
                     return int(interval[:-1]) * 60
@@ -861,7 +900,7 @@ class Mosquito(object):
 
         self.db.create(
             'True', plugin, source, destination, update_alert, update_interval, description, regex, regex_action,
-            '0', '0'
+            '0', '0', '0'
         )
 
     def delete(self, args):
@@ -1068,11 +1107,12 @@ class Mosquito(object):
                     config_plugin = config[2]
                     config_timestamp = config[10]
                     config_counter = config[11]
+                    config_alert_timestamp = config[12]
 
                     self.db.update(
                         config_id, config_enabled, config_plugin, config_source, config_destination, config_update_alert,
                         config_update_interval, config_description, config_regex, config_regex_action, config_timestamp,
-                        config_counter
+                        config_counter, config_alert_timestamp
                     )
         else:
             self.logger.info("There are no configurations for changes!")

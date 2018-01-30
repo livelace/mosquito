@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import ast
 import eventlet
 import feedparser
 import logging
@@ -46,7 +47,7 @@ class MosquitoRSS(object):
 
         with eventlet.Timeout(self.settings.grab_timeout):
             try:
-                with requests.get(url, headers=headers) as r:
+                with requests.get(url, headers=headers, verify=ast.literal_eval(self.settings.check_ssl)) as r:
                     content = BytesIO(r.content)
                     feed = feedparser.parse(content)
 
@@ -54,6 +55,22 @@ class MosquitoRSS(object):
                 self._logger(
                     "warning",
                     "Timeout for URL was reached: {}".format(url)
+                )
+
+                return messages
+
+            except requests.exceptions.SSLError:
+                self._logger(
+                    "warning",
+                    "SSL verification for URL was failed: {}".format(url)
+                )
+
+                return messages
+
+            except Exception as error:
+                self._logger(
+                    "warning",
+                    "Cannot grab HTML from URL: {} -> {}".format(url, error)
                 )
 
                 return messages

@@ -23,8 +23,11 @@ class MosquitoSettings(object):
         
         settings = configparser.RawConfigParser(
             {
+                'alert_interval': '1d',
+                'alert_subject': '***Mosquito: No new data ***',
                 'attachment_mime': 'logstash',
                 'attachment_name': 'mosquito',
+                'check_ssl': 'True',
                 'destination': None,
                 'firefox_path': '/usr/bin/firefox',
                 'geckodriver_path': '/usr/local/bin/geckodriver',
@@ -57,8 +60,11 @@ class MosquitoSettings(object):
                 self.destination = self.destination.split(',')
                 self.destination = [x.strip(' ') for x in self.destination]
 
+            self.alert_interval = settings.get('main', 'alert_interval')
+            self.alert_subject = settings.get('main', 'alert_subject')
             self.attachment_mime = settings.get('main', 'attachment_mime')
             self.attachment_name = settings.get('main', 'attachment_name')
+            self.check_ssl = settings.get('main', 'check_ssl')
             self.grab_timeout = int(settings.get('main', 'grab_timeout'))
             self.lock_file = settings.get('main', 'lock_file')
             self.regex = settings.get('main', 'regex').split()
