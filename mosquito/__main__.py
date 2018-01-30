@@ -671,11 +671,11 @@ class Mosquito(object):
 
         args = parser.parse_args()
 
-        #try:
-        args.func(args)
-        #except AttributeError:
-        #    parser.print_help()
-        #    sys.exit(0)
+        try:
+            args.func(args)
+        except AttributeError:
+            parser.print_help()
+            sys.exit(0)
 
     def _human_time(self, seconds):
         """ Convert seconds to human time """
