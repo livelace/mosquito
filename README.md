@@ -60,9 +60,16 @@
 ```
 [main]
 
+# ToDo
+alert_interval = 1d
+alert_subject = ***Mosquito: No new data ***
+
 # Set custom mime type and name for attachments. It could be need for ELK imap plugin, for instance :)
 attachment_mime = logstash
 attachment_name = mosquito
+
+# ToDO
+check_ssl = True
 
 # Destination by default.
 destination = user@example.com
