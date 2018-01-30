@@ -8,6 +8,7 @@ import eventlet
 import fcntl
 import logging
 import multiprocessing
+import io
 import os
 import re
 import requests
@@ -894,7 +895,7 @@ class Mosquito(object):
         try:
             flock = open(self.settings.lock_file, 'a')
             fcntl.flock(flock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
+        except io.BlockingIOError:
             self.logger.error('Mosquito already running. Cannot set lock on: {}'.format(self.settings.lock_file))
             sys.exit(1)
 
