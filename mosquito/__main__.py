@@ -8,7 +8,6 @@ import eventlet
 import fcntl
 import logging
 import multiprocessing
-import io
 import os
 import re
 import requests

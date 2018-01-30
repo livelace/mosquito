@@ -42,9 +42,11 @@ class MosquitoRSS(object):
 
         eventlet.monkey_patch()
 
+        headers = {'User-Agent': self.settings.user_agent}
+
         with eventlet.Timeout(self.settings.grab_timeout):
             try:
-                with requests.get(url) as r:
+                with requests.get(url, headers=headers) as r:
                     content = BytesIO(r.content)
                     feed = feedparser.parse(content)
 
