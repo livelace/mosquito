@@ -587,7 +587,8 @@ class Mosquito(object):
         parser_create = subparsers.add_parser('create', help=self.help.create1)
         parser_create.add_argument('--plugin', required=True, help=self.help.create2)
         parser_create.add_argument('--source', required=True, help=self.help.create3)
-        parser_create.add_argument('--destination', nargs='+', default=self.settings.destination, help=self.help.create4)
+        parser_create.add_argument('--destination', required=True, nargs='+', default=self.settings.destination,
+                                   help=self.help.create4)
         parser_create.add_argument('--update-alert', default=self.settings.update_alert, help=self.help.create5)
         parser_create.add_argument('--update-interval', default=self.settings.update_interval, help=self.help.create6)
         parser_create.add_argument('--description', nargs='+', help=self.help.create7)
@@ -631,11 +632,11 @@ class Mosquito(object):
 
         args = parser.parse_args()
 
-        #try:
-        args.func(args)
-        #except AttributeError:
-        #    parser.print_help()
-        #    sys.exit(0)
+        try:
+            args.func(args)
+        except AttributeError:
+            parser.print_help()
+            sys.exit(0)
 
     def _human_time(self, seconds):
         """ Convert seconds to human time """
@@ -782,9 +783,6 @@ class Mosquito(object):
             else:
                 self.logger.error("There are no valid destination emails!")
                 sys.exit(1)
-        else:
-            self.logger.error("There are no valid destination emails!")
-            sys.exit(1)
 
     def _validate_interval(self, interval):
         """
@@ -818,31 +816,32 @@ class Mosquito(object):
     def _validate_plugin(self, plugin):
         """ Supported plugins """
 
-        plugin_status = True
+        if plugin:
+            plugin_status = True
 
-        # ------------------------------------------------------------------------
+            # ------------------------------------------------------------------------
 
-        if isinstance(plugin, str):
-            if plugin not in self.plugins:
-                plugin_status = False
-        elif isinstance(plugin, list):
-            for item in plugin:
-                if item not in self.plugins:
-                    plugin_status = False
-        else:
-            plugin_status = False
-
-        # ------------------------------------------------------------------------
-
-        if plugin_status:
-            return plugin
-        else:
             if isinstance(plugin, str):
-                self.logger.error("Unsupported plugins detected: {}".format(plugin))
+                if plugin not in self.plugins:
+                    plugin_status = False
             elif isinstance(plugin, list):
-                self.logger.error("Unsupported plugins detected: {}".format(' '.join(str(i) for i in plugin)))
+                for item in plugin:
+                    if item not in self.plugins:
+                        plugin_status = False
+            else:
+                plugin_status = False
 
-            sys.exit(1)
+            # ------------------------------------------------------------------------
+
+            if plugin_status:
+                return plugin
+            else:
+                if isinstance(plugin, str):
+                    self.logger.error("Unsupported plugins detected: {}".format(plugin))
+                elif isinstance(plugin, list):
+                    self.logger.error("Unsupported plugins detected: {}".format(' '.join(str(i) for i in plugin)))
+
+                sys.exit(1)
 
     def create(self, args):
         """ Create a configuration """
@@ -889,7 +888,7 @@ class Mosquito(object):
                     self.db.delete(None, id)
 
     def fetch(self, args):
-        """ Fetch data """
+        """ Fetch data from source """
 
         # Set lock
         try:
@@ -990,9 +989,9 @@ class Mosquito(object):
     def set(self, args):
         """ Set parameters for configurations """
 
-        id = args.id
+        ids = args.id
         enabled = args.enabled
-        plugin = self._validate_plugin(args.plugin)
+        plugins = self._validate_plugin(args.plugin)
         source = args.source
         destination = self._validate_destination(args.destination)
         update_alert = self._validate_interval(args.update_alert)
@@ -1003,22 +1002,22 @@ class Mosquito(object):
 
         configs = []
 
-        if not args.plugin and not args.id:
+        if not plugins and not ids:
             self.logger.error("You must choose --id and/or --plugin parameters")
             sys.exit(1)
 
-        elif args.plugin and not args.id:
-            for plugin in args.plugin:
+        elif plugins and not ids:
+            for plugin in plugins:
                 configs = configs + self.db.list(plugin, 'all')
 
-        elif not args.plugin and args.id:
-            for id in args.id:
+        elif not plugins and ids:
+            for id in ids:
                 configs = configs + self.db.list('all', id)
 
-        elif args.plugin and args.id:
-            for plugin in args.plugin:
+        elif plugins and ids:
+            for plugin in plugins:
                 configs = configs + self.db.list(plugin, 'all')
-            for id in args.id:
+            for id in ids:
                 configs = configs + self.db.list('all', id)
 
         configs = sorted(list(set(configs)))
@@ -1075,6 +1074,9 @@ class Mosquito(object):
                         config_update_interval, config_description, config_regex, config_regex_action, config_timestamp,
                         config_counter
                     )
+        else:
+            self.logger.info("There are no configurations for changes!")
+
 
 def main():
     Mosquito()
