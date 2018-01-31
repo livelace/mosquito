@@ -60,7 +60,11 @@
 ```
 [main]
 
-# ToDo
+# Frequency of an alert email for sources which don't have new data.
+# "s" - seconds
+# "m" - minutes
+# "h" - hours
+# "d" - days
 alert_interval = 1d
 alert_subject = ***Mosquito: No new data ***
 
@@ -68,11 +72,15 @@ alert_subject = ***Mosquito: No new data ***
 attachment_mime = logstash
 attachment_name = mosquito
 
-# ToDO
+# Check SSL certificates of sources
 check_ssl = True
 
 # Destination by default.
 destination = user@example.com
+
+# Path to Firefox and Geckodriver (it needs for making screenshots of webpages).
+firefox_path = /usr/bin/firefox
+geckodriver_path = /usr/local/bin/geckodriver
 
 # Amount of time (in seconds) for an entire connection to a source.
 grab_timeout = 60
@@ -96,7 +104,7 @@ smtp_password = Passw0rD
 # Default length of an email subject.
 subject_length = 100
 
-# Send an alert email, if no new data during specific interval. Default value.
+# Send an alert email, if no new data during specific interval.
 update_alert = 7d
 
 # Update interval. Default value.
