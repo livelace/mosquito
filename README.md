@@ -7,7 +7,7 @@
 
 * Work in parallel. Configurations are splitted into a process pool (Python [multiproccessing](https://docs.python.org/3/library/multiprocessing.html)).
 * Support data sources: RSS, Twitter.
-* Support for a capture of image, HTML, text from a page.
+* Support for grabbing from a web-page: screenshot, HTML, text.
 * Support regex (case insensitive) for content matching.
 * Support actions (if regex was matched) for content processing.
 * Support an offline mode. Save data to a database if a SMTP server is not available.
@@ -29,14 +29,14 @@
   
 * **grab** - grab the source of data  
     
-  e.g. grab=full|html|image|text
+  e.g. grab=full|html|screenshot|text
 
   full - grab image, HTML, text  
   html - grab only HTML data  
-  image - grab only image data  
+  screenshot - grab only a screenshot of a web-page  
   text - grab only text
     
-  *images* are captured with help of [Selenium](http://selenium-python.readthedocs.io/) and [Firefox](https://www.mozilla.org/en-US/)  
+  *screenshots* are captured with help of [Selenium](http://selenium-python.readthedocs.io/) and [Firefox](https://www.mozilla.org/en-US/)  
   *html* and *text* are fetched with [Requests](http://docs.python-requests.org/en/latest/)
   
   multiple options are supported

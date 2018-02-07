@@ -29,8 +29,8 @@ class MosquitoSettings(object):
                 'attachment_name': 'mosquito',
                 'check_ssl': 'True',
                 'destination': None,
-                'firefox_path': '/usr/bin/firefox',
-                'geckodriver_path': '/usr/local/bin/geckodriver',
+                'browser_path': None,
+                'browser_driver_path': None,
                 'grab_timeout': 60,
                 'lock_file': '/tmp/mosquito.lock',
                 'regex': '.*',
@@ -64,6 +64,8 @@ class MosquitoSettings(object):
             self.alert_subject = settings.get('main', 'alert_subject')
             self.attachment_mime = settings.get('main', 'attachment_mime')
             self.attachment_name = settings.get('main', 'attachment_name')
+            self.browser_path = settings.get('main', 'browser_path')
+            self.browser_driver_path = settings.get('main', 'browser_driver_path')
             self.check_ssl = settings.get('main', 'check_ssl')
             self.grab_timeout = int(settings.get('main', 'grab_timeout'))
             self.lock_file = settings.get('main', 'lock_file')

@@ -21,8 +21,6 @@ from datetime import datetime
 from distutils.util import strtobool
 from html2text import HTML2Text
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.firefox.options import Options
 from tempfile import mkstemp
 from terminaltables import AsciiTable
 from textwrap import wrap
@@ -62,7 +60,7 @@ class MosquitoParallelFetching(object):
 
         return data
 
-    def _execute(self, path, content, html, image, text, id, queue):
+    def _execute(self, path, content, html, screenshot, text, id, queue):
         """ Execute a script with arguments """
 
         def delete(filename):
@@ -109,7 +107,7 @@ class MosquitoParallelFetching(object):
         # Save contents to files
         content_file = write(content, 'w')
         html_file = write(html, 'w')
-        image_file = write(image, 'wb')
+        image_file = write(screenshot, 'wb')
         text_file = write(text, 'w')
 
         # Execute script with arguments
@@ -170,41 +168,49 @@ class MosquitoParallelFetching(object):
                         "Cannot grab HTML from URL: {} -> {}".format(url, error)
                     ])
 
-        elif mode == 'image':
-            FIREFOX_PATH = '/usr/bin/firefox-bin'
-            FIREFOX_DRIVER_PATH = '/usr/local/bin/geckodriver'
+        elif mode == 'screenshot':
+            if re.search("firefox", self.settings.browser_path):
+                browser_options = webdriver.FirefoxOptions()
+                browser_options.add_argument("--headless")
+                browser_options.binary_location = self.settings.browser_path
 
-            firefox_options = Options()
-            firefox_options.add_argument("--headless")
-            firefox_options.binary_location = FIREFOX_PATH
+                driver = webdriver.Firefox(
+                    executable_path=self.settings.browser_driver_path,
+                    firefox_options=browser_options
+                )
 
-            driver = webdriver.Firefox(
-                executable_path=FIREFOX_DRIVER_PATH,
-                firefox_options=firefox_options
-            )
+            elif re.search("chrome|chromium", self.settings.browser_path):
+                browser_options = webdriver.ChromeOptions()
+                browser_options.add_argument("--headless")
+                browser_options.binary_location = self.settings.browser_path
 
-            try:
-                driver.set_page_load_timeout(self.settings.grab_timeout)
-                driver.get(url)
-                element = driver.find_element_by_tag_name('body')
-                image = element.screenshot_as_png
-                driver.quit()
+                driver = webdriver.Chrome(
+                    executable_path=self.settings.browser_driver_path,
+                    chrome_options=browser_options
+                )
 
-                return image
+            with eventlet.Timeout(self.settings.grab_timeout):
+                try:
+                    driver.get(url)
+                    element = driver.find_element_by_tag_name('body')
+                    screenshot = element.screenshot_as_png
+                    driver.quit()
 
-            except TimeoutException:
-                queue.put([
-                    id,
-                    "warning",
-                    "Timeout for URL was reached: {}".format(url)
-                ])
+                    return screenshot
 
-            except Exception as error:
-                queue.put([
-                    id,
-                    "warning"
-                    "Cannot grab image from URL: {} -> {}".format(url, error)
-                ])
+                except eventlet.timeout.Timeout:
+                    queue.put([
+                        id,
+                        "warning",
+                        "Timeout for URL was reached: {}".format(url)
+                    ])
+
+                except Exception as error:
+                    queue.put([
+                        id,
+                        "warning"
+                        "Cannot grab screenshot from URL: {} -> {}".format(url, error)
+                    ])
 
         elif mode == 'text':
             with eventlet.Timeout(self.settings.grab_timeout):
@@ -380,11 +386,11 @@ class MosquitoParallelFetching(object):
                                 for grab in grabs:
                                     if grab == 'full':
                                         grabbed_html = self._grab_content(message_url, 'html', config_id, logger_queue)
-                                        grabbed_image = self._grab_content(message_url, 'image', config_id, logger_queue)
+                                        grabbed_image = self._grab_content(message_url, 'screenshot', config_id, logger_queue)
                                         grabbed_text = self._grab_content(message_url, 'text', config_id, logger_queue)
                                     elif grab == 'html':
                                         grabbed_html = self._grab_content(message_url, grab, config_id, logger_queue)
-                                    elif grab == 'image':
+                                    elif grab == 'screenshot':
                                         grabbed_image = self._grab_content(message_url, grab, config_id, logger_queue)
                                     elif grab == 'text':
                                         grabbed_text = self._grab_content(message_url, grab, config_id, logger_queue)
@@ -742,7 +748,7 @@ class Mosquito(object):
             elif action_type == 'grab':
                 try:
                     grab_content = value.split('=')[1]
-                    if grab_content != 'full' and grab_content != 'html' and grab_content != 'image' and grab_content != 'text':
+                    if grab_content != 'full' and grab_content != 'html' and grab_content != 'screenshot' and grab_content != 'text':
                         raise Exception
 
                 except Exception:
@@ -1068,6 +1074,8 @@ class Mosquito(object):
 
                     if enabled != "True" and enabled != "False":
                         config_enabled = config[1]
+                    else:
+                        config_enabled = enabled
 
                     if source:
                         config_source = source
