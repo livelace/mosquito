@@ -632,7 +632,7 @@ class Mosquito(object):
         parser_create = subparsers.add_parser('create', help=self.help.create1)
         parser_create.add_argument('--plugin', required=True, help=self.help.create2)
         parser_create.add_argument('--source', required=True, help=self.help.create3)
-        parser_create.add_argument('--destination', required=True, nargs='+', default=self.settings.destination,
+        parser_create.add_argument('--destination', nargs='+', default=self.settings.destination,
                                    help=self.help.create4)
         parser_create.add_argument('--update-alert', default=self.settings.update_alert, help=self.help.create5)
         parser_create.add_argument('--update-interval', default=self.settings.update_interval, help=self.help.create6)
