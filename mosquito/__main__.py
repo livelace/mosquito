@@ -1068,7 +1068,7 @@ class Mosquito(object):
 
         table = [[
                   'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 'Alert', 'Interval', 'Desc', 'Regex',
-                  'Regex Action', 'Images Settings', 'Last Update', 'Count'
+                  'Regex Action', 'Images', 'Update', 'Count'
                 ]]
 
         configs = []
@@ -1096,21 +1096,25 @@ class Mosquito(object):
             for config in configs:
                 if len(config) > 0:
                     table.append([
-                        config[0], config[1], config[2], '\n'.join(wrap(str(config[3]), 42)),
+                        config[0], config[1], config[2], '\n'.join(wrap(str(config[3]), 15)),
                         '\n'.join(ast.literal_eval(config[4])), self._human_time(int(config[5])),
-                        self._human_time(int(config[6])), '\n'.join(wrap(str(config[7]), 30)),
+                        self._human_time(int(config[6])), '\n'.join(wrap(str(config[7]), 20)),
                         '\n'.join(ast.literal_eval(config[8])), '\n'.join(ast.literal_eval(config[9])), '\n'.join(ast.literal_eval(config[13])),
                         datetime.fromtimestamp(int(config[10])), config[11]
                     ])
                     
         if len(table) > 1:
             table = AsciiTable(table)
+            table.justify_columns[0] = 'center'
             table.justify_columns[1] = 'center'
             table.justify_columns[2] = 'center'
+            table.justify_columns[3] = 'center'
+            table.justify_columns[4] = 'center'
             table.justify_columns[5] = 'center'
             table.justify_columns[6] = 'center'
             table.justify_columns[7] = 'center'
             table.justify_columns[10] = 'center'
+            table.justify_columns[11] = 'center'
             table.inner_row_border = True
             print(table.table)
         else:
