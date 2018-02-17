@@ -76,33 +76,33 @@ class MosquitoRSS(object):
                 return messages
 
         for post in feed.entries:
-            expanded_url = None
+            url = None
             timestamp = None
 
             # Get URL from a post
             try:
                 if len(post.links[0]['href']) > 0:
-                    expanded_url = post.links[0]['href']
-            except:
+                    url = post.links[0]['href']
+            except Exception:
                 pass
 
             # Get timestamp from a post
             try:
                 timestamp = time.mktime(post.updated_parsed)
-            except:
+            except Exception:
                 pass
 
-            # Get timestamp from a post
-            try:
-                timestamp = time.mktime(post.published_parsed)
-            except:
-                pass
+            if not timestamp:
+                try:
+                    timestamp = time.mktime(post.published_parsed)
+                except Exception:
+                    pass
 
-            # Make a timestamp if there are no any internal timestamps
+            # Make timestamp based on current time if there are no any internal timestamps in a post
             if not timestamp:
                 timestamp = time.mktime(datetime.utcnow().timetuple())
                 
-            messages.append([timestamp, post.title, expanded_url])
+            messages.append([timestamp, post.title, url])
 
         self._logger(
             "debug",

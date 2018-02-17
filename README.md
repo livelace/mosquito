@@ -1,49 +1,52 @@
 
 # mosquito
 
-*mosquito* is a news aggregator which supports various types of data sources like RSS, Twitter etc. It fetches data (HTML, image, text) in parallel from sources and process that data in different manners: execute a shell script with arguments, send data to an email with custom properties (subject, priority, headers)).
+*mosquito* is a news aggregator which supports various types of data sources like RSS, Twitter etc. It fetches data (HTML, images, screenshot, text) in parallel from sources and process that data in different manners: execute a shell script with arguments, send data to an email with custom properties (subject, priority, headers)).
 
 ### Main features:
 
 * Work in parallel. Configurations are splitted into a process pool (Python [multiproccessing](https://docs.python.org/3/library/multiprocessing.html)).
 * Support data sources: RSS, Twitter.
-* Support for grabbing from a web-page: screenshot, HTML, text.
+* Support for grabbing from a web-page: HTML, images, screenshot, text.
 * Support regex (case insensitive) for content matching.
 * Support actions (if regex was matched) for content processing.
 * Support an offline mode. Save data to a database if a SMTP server is not available.
 * Support update alerts and update intervals for configurations.
 * Support encoding detection and transformation (default to UTF-8).
 
+### Available destinations:
+
+* **exec** - execute a script with arguments  
+  e.g. exec:/path/to/script.sh
+  
+  **$1** - a comma separated list of tags  
+  **$2** - path to a directory with grabbed content
+
+  multiple options are supported
+
+* **mail** - send an email  
+  e.g. mail:user@example.com
+
+  multiple options are supported
+
 ### Available actions:
 
-* **execute** - execute a script with parameters  
-    
-  e.g. execute=/path/to/script.sh
 
-  $1 - path to file with original content  
-  $2 - path to a grabbed HTML file  
-  $3 - path to a grabbed image file  
-  $4 - path to a grabbed text file
-  
-  files created as temporary with "mosquito _" prefix in their names
-  
 * **grab** - grab the source of data  
     
   e.g. grab=full|html|screenshot|text
 
-  full - grab image, HTML, text  
-  html - grab only HTML data  
-  screenshot - grab only a screenshot of a web-page  
-  text - grab only text
+  **full** - grab image, HTML, text  
+  **html** - grab only HTML data  
+  **images** - grab all images which were found on a web-page  
+  **screenshot** - grab only a screenshot of a web-page  
+  **text** - grab only text
     
-  *screenshots* are captured with help of [Selenium](http://selenium-python.readthedocs.io/) and [Firefox](https://www.mozilla.org/en-US/)  
-  *html* and *text* are fetched with [Requests](http://docs.python-requests.org/en/latest/)
-  
   multiple options are supported
   
-* **header** - add a custom header into an email  
+* **tag** - add a custom tag for a configuration.   
     
-  e.g header=X-foo:bar
+  e.g tag=Foo:Bar
     
   multiple options are supported
   
@@ -72,25 +75,32 @@ alert_subject = ***Mosquito: No new data ***
 attachment_mime = logstash
 attachment_name = mosquito
 
-# Check SSL certificates of sources
+# Check SSL certificates of data sources
 check_ssl = True
 
 # Destination by default.
-destination = user@example.com
+destination = exec:/path/to/script.sh, mail:user@example.com
 
-# Path to Firefox and Geckodriver (it needs for making screenshots of webpages).
-firefox_path = /usr/bin/firefox
-geckodriver_path = /usr/local/bin/geckodriver
+# Default directory where all grabbed content will be placed before exec a script
+exec_path = /tmp/mosquito
 
-# Amount of time (in seconds) for an entire connection to a source.
+# Path to a browser and a browser driver (it needs for making screenshots of web-pages).
+browser_path = /usr/bin/firefox
+browser_driver_path = /usr/local/bin/geckodriver
+
+# Only specific size images will be matched/saved (grab=images).
+image_min = 600x300
+image_max = 800x600
+
+# Amount of time (in seconds) for an entire connection to a data source.
 grab_timeout = 60
 
 # Process pool which will process configurations.
 pool = 4
 
-# Set default regex and regex action. Support a space separated list for both parameters.
+# Set defaults for regex and regex action.
 regex = .*
-regex_action = subject=Mosquito:
+regex_action = grab=text, subject=Mosquito:
 
 # Email settings.
 smtp_server = mail.example.com
@@ -114,7 +124,7 @@ update_interval = 15m
 user_agent = Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; FSL 7.0.6.01001)
 
 # Verbosity level
-verbose = info
+log_level = info
 
 # Twitter settings.
 [twitter]
@@ -130,46 +140,41 @@ access_token_secret = <ACCESS_SECRET>
 
 Create Twitter configuration:
 ```
-mosquito create --plugin twitter --source rianru --destination user@example.com --update-interval 1m --description 'РИА Новости' --regexp '.*' --regex-action execute=/path/to/script.sh subject=Twitter: 
+mosquito create --plugin twitter --source rianru --destination mail:user@example.com --update-interval 1m --description "РИА Новости" --regex ".*" --regex-action grab=text grab=html subject=Twitter: 
 ```
 
 Create RSS configuration:
 ```
-mosquito create --plugin rss --source http://feeds.dzone.com/home --destination user@example.com --update-interval 1d --description 'DZone feeds' --regex 'javascript' --regex-action grab=text header=X-mosquito:dzone 
+mosquito create --plugin rss --source http://feeds.dzone.com/home --destination mail:user@example.com --update-interval 1d --description "DZone feeds" --regex "javascript" --regex-action grab=text tag=X-mosquito:dzone 
 ```
 
-Delete all Twitter configurations:
+Delete specific configurations :
 ```
+mosquito delete --id 1 2 3
 mosquito delete --plugin twitter
 ```
 
-Delete specific configuration:
+Update specific configurations:
 ```
-mosquito delete --id 1
-```
-
-Update specific configuration:
-```
-mosquito set --id 1 --source http://example.com --update-interval 1w
+mosquito set --id 1 2 3 --source http://example.com --update-interval 1w
+mosquito set --plugin rss --update-alert 1d --update-interval 1s --regex-action grab=full
 ```
 
 Disable specific configuration:
 ```
-mosquito set --id 1 --enabled False
+mosquito set --id 1 2 3 --enabled False
+mosquito set --plugin twitter --enabled False
 ```
-
-### Output examples:
 
 List configurations:
 
 ```
-+----+---------+---------+------------------------------------------------------------------+---------------------+--------------+-----------------+-------------+--------+------------------------------------+---------------------+-------+
-| ID | Enabled | Plugin  | Source                                                           | Destination         | Update alert | Update interval | Description | Regexp | Regexp action                      |     Last update     | Count |
-+----+---------+---------+------------------------------------------------------------------+---------------------+--------------+-----------------+-------------+--------+------------------------------------+---------------------+-------+
-| 1  |   True  | rss     | http://www.opennet.ru/opennews/opennews_all.rss                  | o.popov@livelace.ru |     7d       |       15m       |     None    | .*     | header=X-mosquito-tag1:it          | 2016-10-11 06:25:02 | 17    |
-|    |         |         |                                                                  |                     |              |                 |             |        | header=X-mosquito-tag2:common      |                     |       |
-|    |         |         |                                                                  |                     |              |                 |             |        | header=X-mosquito-lang:ru          |                     |       |
-|    |         |         |                                                                  |                     |              |                 |             |        | grab=text                          |                     |       |
-+----+---------+---------+------------------------------------------------------------------+---------------------+--------------+-----------------+-------------+--------+------------------------------------+---------------------+-------+
++----+---------+---------+--------+-----------------------+-------+----------+-------------+-------+------------------+-----------------+---------------------+-------+
+| ID | Enabled |  Plugin | Source | Destination           | Alert | Interval |     Desc    | Regex | Regex Action     | Images Settings | Last Update         | Count |
++----+---------+---------+--------+-----------------------+-------+----------+-------------+-------+------------------+-----------------+---------------------+-------+
+| 1  |   True  | twitter | rianru | mail:user@example.com |  7d   |   1m     | РИА Новости | .*    | grab=text        |   min:600x300   | 1970-01-01 03:00:00 | 0     |
+|    |         |         |        |                       |       |          |             |       | grab=html        |   max:800x600   |                     |       |
+|    |         |         |        |                       |       |          |             |       | subject=Twitter: |                 |                     |       |
++----+---------+---------+--------+-----------------------+-------+----------+-------------+-------+------------------+-----------------+---------------------+-------+
 ```
 

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-""" Settings module. Supports ~/.mosquito.ini """
-
 import logging
 import os
 import sys
@@ -18,7 +16,7 @@ class MosquitoSettings(object):
         inifile = os.path.join(os.environ['HOME'], '.mosquito.ini')
         
         if not os.path.exists(inifile):
-            self.logger.error('Configuration files were not found. You should place .mosquito.ini into your home directory.')
+            self.logger.error("Configuration file doesn't found. You should place \".mosquito.ini\" into your home directory.")
             sys.exit(1)        
         
         settings = configparser.RawConfigParser(
@@ -29,9 +27,12 @@ class MosquitoSettings(object):
                 'attachment_name': 'mosquito',
                 'check_ssl': 'True',
                 'destination': None,
+                'exec_path': '/tmp/mosquito',
                 'browser_path': None,
                 'browser_driver_path': None,
                 'grab_timeout': 60,
+                'images_min': '600x300',
+                'images_max': '800x600',
                 'lock_file': '/tmp/mosquito.lock',
                 'regex': '.*',
                 'regex_action': 'subject=Mosquito:',
@@ -47,7 +48,7 @@ class MosquitoSettings(object):
                 'update_alert': '7d',
                 'update_interval': '15m',
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36',
-                'verbose': 'info'
+                'log_level': 'info'
             }
         )
         
@@ -55,11 +56,7 @@ class MosquitoSettings(object):
         try:
             settings.read(inifile)
             
-            self.destination = settings.get('main', 'destination')
-            if self.destination:
-                self.destination = self.destination.split(',')
-                self.destination = [x.strip(' ') for x in self.destination]
-
+            self.destination = self._parse_variables(settings.get('main', 'destination'))
             self.alert_interval = settings.get('main', 'alert_interval')
             self.alert_subject = settings.get('main', 'alert_subject')
             self.attachment_mime = settings.get('main', 'attachment_mime')
@@ -67,10 +64,13 @@ class MosquitoSettings(object):
             self.browser_path = settings.get('main', 'browser_path')
             self.browser_driver_path = settings.get('main', 'browser_driver_path')
             self.check_ssl = settings.get('main', 'check_ssl')
+            self.exec_path = settings.get('main', 'exec_path')
             self.grab_timeout = int(settings.get('main', 'grab_timeout'))
+            self.images_min = settings.get('main', 'images_min')
+            self.images_max = settings.get('main', 'images_max')
             self.lock_file = settings.get('main', 'lock_file')
-            self.regex = settings.get('main', 'regex').split()
-            self.regex_action = settings.get('main', 'regex_action').split()
+            self.regex = self._parse_variables(settings.get('main', 'regex'))
+            self.regex_action = self._parse_variables(settings.get('main', 'regex_action'))
             self.smtp_server = settings.get('main', 'smtp_server')
             self.smtp_port = int(settings.get('main', 'smtp_port'))
             self.smtp_usessl = settings.getboolean('main', 'smtp_usessl')
@@ -83,7 +83,7 @@ class MosquitoSettings(object):
             self.update_alert = settings.get('main', 'update_alert')
             self.update_interval = settings.get('main', 'update_interval')
             self.user_agent = settings.get('main', 'user_agent')
-            self.verbose = settings.get('main', 'verbose')
+            self.log_level = settings.get('main', 'log_level')
             
             # Try to obtain Twitter settings
             if settings.has_section('twitter'):
@@ -99,3 +99,12 @@ class MosquitoSettings(object):
         except Exception as error:
             self.logger.error('Invalid configuration file: {} {}'.format(inifile, error))
             sys.exit(1)
+
+    def _parse_variables(self, values):
+        if values:
+            values = values.split(',')
+            values = [x.strip(' ') for x in values]
+
+            return values
+        else:
+            return []

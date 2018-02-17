@@ -15,6 +15,7 @@ class MosquitoHelp(object):
         self.create7 = "Set description text"
         self.create8 = "Set a space separated list of regexs (only matched messages will be process)"
         self.create9 = "Set a space separated list of actions (see documentation for details)"
+        self.create10 = "Set a space separated list of images settings (see documentation for details)"
 
         self.delete1 = "Delete configurations"
         self.delete2 = "Set a space separated list of plugins"
@@ -40,5 +41,6 @@ class MosquitoHelp(object):
         self.set9 = "Set description text"
         self.set10 = "Set a space separated list of regexs (only matched messages will be process)"
         self.set11 = "Set a space separated list of actions (see documentation for details)"
+        self.set12 = "Set a space separated list of images settings (see documentation for details)"
 
 

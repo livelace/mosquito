@@ -1,4 +1,5 @@
 argparse
+beautifulsoup4
 chardet
 coloredlogs
 eventlet
@@ -10,3 +11,4 @@ requests
 selenium
 terminaltables
 validators
+Pillow

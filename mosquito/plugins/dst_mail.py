@@ -109,89 +109,100 @@ class MosquitoMail(object):
             elif level == "warning":
                 self.logger.warning(message)
 
-    def send(self, destinations, headers, priority, subject, original_content, grabbed_html, grabbed_image,
-             grabber_text):
+    def send(self, email, headers, priority, subject, body, html, screenshot, text, images):
 
         if self.status:
-            for email in destinations:
-                try:
-                    msg = MIMEMultipart()
-                    msg.set_charset('utf-8')
+            try:
+                msg = MIMEMultipart()
+                msg.set_charset('utf-8')
 
-                    msg['From'] = self.settings.smtp_from
-                    msg['To'] = email
+                msg['From'] = self.settings.smtp_from
+                msg['To'] = email
 
-                    # Set a custom header
-                    if headers:
-                        for header in headers:
-                            msg.add_header(header.split(':', 1)[0], header.split(':', 1)[1])
+                # Set a custom header
+                if headers:
+                    for header in headers:
+                        msg.add_header(header.split(':', 1)[0], header.split(':', 1)[1])
 
-                    # Set a priority
-                    if priority:
-                        msg['X-Priority'] = priority
+                # Set a priority
+                if priority:
+                    msg['X-Priority'] = priority
 
-                    # Set a subject
-                    subject =  Header(subject, 'utf-8')
-                    msg['Subject']= subject
+                # Set a subject
+                subject = Header(subject, 'utf-8')
+                msg['Subject']= subject
 
-                    # Add original content
-                    original_content = MIMEText(original_content, 'plain')
-                    original_content.set_charset('utf-8')
-                    msg.attach(original_content)
+                # Add body
+                body = MIMEText(body, 'plain')
+                body.set_charset('utf-8')
+                msg.attach(body)
 
-                    # Add expanded html
-                    if grabbed_html:
-                        html = MIMEText(grabbed_html, self.settings.attachment_mime)
-                        html.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.html')
-                        msg.attach(html)
+                # Add grabbed html
+                if html:
+                    html = MIMEText(html, self.settings.attachment_mime)
+                    html.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.html')
+                    msg.attach(html)
 
-                    # Add expanded image
-                    if grabbed_image:
-                        image = MIMEImage(grabbed_image, 'png')
-                        image.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.png')
+                # Add grabbed image
+                if screenshot:
+                    image = MIMEImage(screenshot, 'png')
+                    image.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.png')
+                    msg.attach(image)
+
+                # Add grabbed text
+                if text:
+                    text = MIMEText(text, self.settings.attachment_mime)
+                    text.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.txt')
+                    text.set_charset('utf-8')
+                    msg.attach(text)
+
+                # Add grabbed image
+                if images:
+                    for image in images:
+                        image_data = image[0]
+                        image_format = image[1]
+
+                        image = MIMEImage(image_data, image_format)
+                        image.add_header(
+                            'Content-Disposition',
+                            'attachment',
+                            filename=self.settings.attachment_name + str(images.index(image)) + "." + image_format.lower())
                         msg.attach(image)
 
-                    # Add expanded text
-                    if grabber_text:
-                        text = MIMEText(grabber_text, self.settings.attachment_mime)
-                        text.add_header('Content-Disposition', 'attachment', filename=self.settings.attachment_name + '.txt')
-                        text.set_charset('utf-8')
-                        msg.attach(text)
+                # Convert envelope to string
+                text = msg.as_string()
 
-                    # Convert envelope to string
-                    text = msg.as_string()
+                self._logger(
+                    "debug",
+                    "Envelope has been assembled"
+                )
+
+                # Try to send letter
+                try:
+                    self.server.sendmail(self.settings.smtp_from, email, text)
 
                     self._logger(
                         "debug",
-                        "Envelope has been assembled"
+                        "Email has been sent: {}".format(email)
                     )
 
-                    # Try to send letter
-                    try:
-                        self.server.sendmail(self.settings.smtp_from, email, text)
-
-                        self._logger(
-                            "debug",
-                            "Email has been sent: {}".format(email)
-                        )
-
-                        return True
-
-                    except Exception as error:
-
-                        self._logger(
-                            "warning",
-                            "Cannot send letter to: {} -> {}".format(email, error)
-                        )
-
-                        return False
+                    return True
 
                 except Exception as error:
+
                     self._logger(
                         "warning",
-                        "Cannot assemble envelope: {}".format(error)
+                        "Cannot send letter to: {} -> {}".format(email, error)
                     )
 
                     return False
+
+            except Exception as error:
+                self._logger(
+                    "warning",
+                    "Cannot assemble envelope: {}".format(error)
+                )
+
+                return False
         else:
             return False

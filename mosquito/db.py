@@ -33,7 +33,8 @@ class MosquitoDB(object):
                                                 regexp_action TEXT,
                                                 timestamp INTEGER NOT NULL,
                                                 counter INTEGER,
-                                                alert_timestamp INTEGER NOT NULL
+                                                alert_timestamp INTEGER NOT NULL,
+                                                images_settings TEXT
                     )
                     """
                 )
@@ -47,9 +48,9 @@ class MosquitoDB(object):
                                             priority TEXT,
                                             subject TEXT,
                                             original_content TEXT,
-                                            expanded_html_content TEXT,
-                                            expanded_image_content BLOB,
-                                            expanded_text_content TEXT,
+                                            grabbed_html TEXT,
+                                            grabbed_screenshot BLOB,
+                                            grabbed_text TEXT,
                                             timestamp INTEGER NOT NULL
                     )
                     """
@@ -108,21 +109,21 @@ class MosquitoDB(object):
             return False
 
     def add_archive(self, config_id, destinations, headers, priority, subject, original_content, grabbed_html,
-                    grabbed_image, grabbed_text, timestamp):
+                    grabbed_screenshot, grabbed_text, timestamp):
 
         try:
-            if grabbed_image:
-                grabbed_image = sqlite3.Binary(grabbed_image)
+            if grabbed_screenshot:
+                grabbed_screenshot = sqlite3.Binary(grabbed_screenshot)
 
             sql = """INSERT INTO archive (
                                         source_id, destination, header, priority, 
-                                        subject,original_content, expanded_html_content, 
-                                        expanded_image_content, expanded_text_content, timestamp) 
+                                        subject, original_content, grabbed_html, 
+                                        grabbed_screenshot, grabbed_text, timestamp) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
 
             conn = sqlite3.connect(self.db)
             conn.execute(sql, [config_id, str(destinations), str(headers), priority, subject, original_content,
-                               grabbed_html, grabbed_image, grabbed_text, timestamp])
+                               grabbed_html, grabbed_screenshot, grabbed_text, timestamp])
             conn.commit()
 
         except Exception as error:
@@ -132,19 +133,19 @@ class MosquitoDB(object):
             )
         
     def create(self, enabled, plugin, source, destination, update_alert, update_interval, description, regex,
-               regex_action, timestamp, counter, alert_timestamp):
+               regex_action, timestamp, counter, alert_timestamp, images_settings):
         
         try:
             sql = """INSERT INTO configuration (
                                                 enabled, plugin, source, destination, 
                                                 update_alert, update_interval, 
                                                 description, regexp, regexp_action, 
-                                                timestamp, counter, alert_timestamp
-                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?);"""
+                                                timestamp, counter, alert_timestamp, images_settings
+                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?);"""
 
             conn = sqlite3.connect(self.db)
             conn.execute(sql, [enabled, plugin, source, str(destination), update_alert, update_interval, description,
-                               str(regex), str(regex_action), timestamp, counter, alert_timestamp])
+                               str(regex), str(regex_action), timestamp, counter, alert_timestamp, str(images_settings)])
             conn.commit()
 
             self._logger(
@@ -154,7 +155,8 @@ class MosquitoDB(object):
 
         except Exception as error:
             self._logger(
-                "Cannot create configuration: {} -> {} -> {}".format(plugin, source, error)
+                "error",
+                "Cannot create configuration: {}".format(error)
             )
         
     def delete(self, plugin, id):
@@ -281,16 +283,17 @@ class MosquitoDB(object):
             return False
 
     def update(self, id, enabled, plugin, source, destination, update_alert, update_interval, description,
-               regex, regex_action, timestamp, counter, alert_timestamp):
+               regex, regex_action, timestamp, counter, alert_timestamp, images_settings):
 
         try:
             query = """UPDATE configuration SET enabled=?, plugin=?, source=?, destination=?, update_alert=?, 
                       update_interval=?, description=?, regexp=?, regexp_action=?, timestamp=?, counter=?,
-                       alert_timestamp=? WHERE id=?;"""
+                       alert_timestamp=?, images_settings=? WHERE id=?;"""
 
             conn = sqlite3.connect(self.db)
-            conn.execute(query,[enabled, plugin, source, str(destination), update_alert, update_interval,
-                                description, str(regex), str(regex_action), timestamp, counter, alert_timestamp, id])
+            conn.execute(query, [enabled, plugin, source, str(destination), update_alert, update_interval,
+                                 description, str(regex), str(regex_action), timestamp, counter, alert_timestamp,
+                                 str(images_settings), id])
             conn.commit()
 
             self._logger(
@@ -301,7 +304,7 @@ class MosquitoDB(object):
         except Exception as error:
             self._logger(
                 "error",
-                "Cannot update configuration: {}".format(id)
+                "Cannot update configuration: {}".format(error)
             )
 
     def update_counter(self, id, count):

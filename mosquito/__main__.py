@@ -12,23 +12,25 @@ import os
 import re
 import requests
 import sys
-import subprocess
 import time
 import validators
 import warnings
 
+from bs4 import BeautifulSoup
 from datetime import datetime
 from distutils.util import strtobool
 from html2text import HTML2Text
+from io import BytesIO
 from selenium import webdriver
-from tempfile import mkstemp
 from terminaltables import AsciiTable
 from textwrap import wrap
+from PIL import Image
 
 from mosquito.db import MosquitoDB
 from mosquito.settings import MosquitoSettings
 from mosquito.help import MosquitoHelp
 
+from mosquito.plugins.dst_exec import MosquitoExec
 from mosquito.plugins.dst_mail import MosquitoMail
 from mosquito.plugins.src_rss import MosquitoRSS
 from mosquito.plugins.src_twitter import MosquitoTwitter
@@ -39,7 +41,7 @@ class MosquitoParallelFetching(object):
         self.settings = settings
         self.force = force
 
-        coloredlogs.install(level=self.settings.verbose)
+        coloredlogs.install(level=self.settings.log_level)
         self.logger = logging.getLogger('[POOL]')
 
     def _convert_encoding(self, data, id, queue, new_encoding='UTF-8'):
@@ -60,86 +62,98 @@ class MosquitoParallelFetching(object):
 
         return data
 
-    def _execute(self, path, content, html, screenshot, text, id, queue):
-        """ Execute a script with arguments """
-
-        def delete(filename):
-            if filename:
-                try:
-                    os.remove(filename)
-                    queue.put([
-                        id,
-                        "debug",
-                        "Temporary file has been deleted: {}".format(filename)
-                    ])
-                except Exception as error:
-                    queue.put([
-                        id,
-                        "warning",
-                        "Cannot delete the temporary file: {} -> {}".format(filename, error)
-                    ])
-
-        def write(data, mode):
-            if data:
-                try:
-                    fd, filename = mkstemp(prefix='mosquito_')
-                    tf = os.fdopen(fd, mode)
-                    tf.write(data)
-                    tf.close()
-
-                    queue.put([
-                        id,
-                        "debug",
-                        "Data has been written to a temporary file: {}".format(filename)
-                    ])
-
-                    return filename
-
-                except Exception as error:
-                    queue.put([
-                        id,
-                        "warning",
-                        "Cannot write data to a temporary file: {} -> {}".format(filename, error)
-                    ])
-
-                    return None
-
-        # Save contents to files
-        content_file = write(content, 'w')
-        html_file = write(html, 'w')
-        image_file = write(screenshot, 'wb')
-        text_file = write(text, 'w')
-
-        # Execute script with arguments
-        try:
-            subprocess.call([str(path), str(content_file), str(html_file), str(image_file), str(text_file)])
-            queue.put([
-                id,
-                "debug",
-                "Script has been executed: {}".format(path)
-            ])
-
-        except Exception as error:
-            queue.put([
-                id,
-                "warning",
-                "Script execution was finished with errors: {} -> {}".format(path, error)
-            ])
-
-        finally:
-            delete(content_file)
-            delete(html_file)
-            delete(image_file)
-            delete(text_file)
-
-    def _grab_content(self, url, mode, id, queue):
+    def _grab_content(self, url, mode, id, queue, params=None):
         """ Grab data in different formats """
 
         eventlet.monkey_patch()
 
-        headers = {'User-Agent': self.settings.user_agent}
+        headers = {"User-Agent": self.settings.user_agent}
 
-        if mode == 'html':
+        if mode == "images":
+            image_min_width = 0
+            image_min_height = 0
+            image_max_width = 0
+            image_max_height = 0
+
+            if params:
+                for param in params:
+                    k, v = param.split(':')
+                    w, h = v.split('x')
+
+                    if k == 'min':
+                        image_min_width = int(w)
+                        image_min_height = int(h)
+                    else:
+                        image_max_width = int(w)
+                        image_max_height = int(h)
+
+            with eventlet.Timeout(self.settings.grab_timeout):
+                try:
+                    # -------------------------------------------------------------------------------------
+
+                    links = []
+                    images = []
+
+                    # -------------------------------------------------------------------------------------
+
+                    with requests.get(url, headers=headers, verify=ast.literal_eval(self.settings.check_ssl)) as r:
+                        body = self._convert_encoding(r.content, id, queue)
+
+                    # -------------------------------------------------------------------------------------
+
+                    soup = BeautifulSoup(body, "lxml")
+
+                    for image in soup.find_all('img', src=True):
+                        link = image['src']
+
+                        if validators.url(link):
+                            links.append(link)
+
+                    # -------------------------------------------------------------------------------------
+
+                    for link in links:
+                        with requests.get(link, headers=headers, verify=ast.literal_eval(self.settings.check_ssl)) as r:
+                            image_data = BytesIO(r.content)
+
+                            try:
+                                with Image.open(image_data) as image:
+                                    width, height = image.size
+
+                                    if width >= image_min_width and height >= image_min_height:
+                                        if width <= image_max_width and height <= image_max_height:
+                                            queue.put([
+                                                id,
+                                                "debug",
+                                                "Image was matched: {}".format(link)
+                                            ])
+                                            images.append([image_data.getvalue(), image.format])
+                            except:
+                                pass
+
+                    return images
+
+                except eventlet.timeout.Timeout:
+                    queue.put([
+                        id,
+                        "warning",
+                        "Timeout for URL was reached: {}".format(url)
+                    ])
+
+                except requests.exceptions.SSLError:
+                    queue.put([
+                        id,
+                        "warning",
+                        "SSL verification for URL was failed: {}".format(url)
+                    ])
+
+                except Exception as error:
+                    queue.put([
+                        id,
+                        "warning",
+                        "Cannot grab images from URL: {} -> {}".format(url, error)
+                    ])
+
+        elif mode == "html":
             with eventlet.Timeout(self.settings.grab_timeout):
                 try:
                     with requests.get(url, headers=headers, verify=ast.literal_eval(self.settings.check_ssl)) as r:
@@ -168,7 +182,7 @@ class MosquitoParallelFetching(object):
                         "Cannot grab HTML from URL: {} -> {}".format(url, error)
                     ])
 
-        elif mode == 'screenshot':
+        elif mode == "screenshot":
             if re.search("firefox", self.settings.browser_path):
                 browser_options = webdriver.FirefoxOptions()
                 browser_options.add_argument("--headless")
@@ -212,7 +226,7 @@ class MosquitoParallelFetching(object):
                         "Cannot grab screenshot from URL: {} -> {}".format(url, error)
                     ])
 
-        elif mode == 'text':
+        elif mode == "text":
             with eventlet.Timeout(self.settings.grab_timeout):
                 try:
                     with requests.get(url, headers=headers, verify=ast.literal_eval(self.settings.check_ssl)) as r:
@@ -257,7 +271,7 @@ class MosquitoParallelFetching(object):
                 message = item[2]
 
                 coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s[{}] %(levelname)s  %(message)s'.format(config_id)
-                coloredlogs.install(level=self.settings.verbose)
+                coloredlogs.install(level=self.settings.log_level)
 
                 if level == "debug":
                     self.logger.debug(message)
@@ -314,7 +328,7 @@ class MosquitoParallelFetching(object):
         config_id = config[0]
         config_enabled = config[1]
         config_plugin = config[2]
-        config_url = config[3]
+        config_source = config[3]
         config_destination = ast.literal_eval(config[4])
         config_update_alert = config[5]
         config_update_interval = config[6]
@@ -322,135 +336,154 @@ class MosquitoParallelFetching(object):
         config_regex_action = ast.literal_eval(config[9])
         config_timestamp = config[10]
         config_alert_timestamp = config[12]
+        config_images_settings = ast.literal_eval(config[13])
         current_timestamp = time.mktime(datetime.utcnow().timetuple())
-        logger_queue = config[13]
+        queue = config[14]
 
-        db = MosquitoDB(config_id, logger_queue)
-        mail = MosquitoMail(config_id, logger_queue)
+        db = MosquitoDB(config_id, queue)
+        exec = MosquitoExec(config_id, queue)
+        mail = MosquitoMail(config_id, queue)
 
-        if self.force or config_enabled == 'True':
+        if self.force or config_enabled == "True":
             if self.force or (current_timestamp - config_timestamp) > config_update_interval:
 
-                logger_queue.put([
+                queue.put([
                     config_id,
                     "info",
                     "Working with configuration: {}".format(config_id)
                 ])
 
-                if config_plugin == 'rss':
-                    plugin = MosquitoRSS(config_id, logger_queue)
-                elif config_plugin == 'twitter':
-                    plugin = MosquitoTwitter(config_id, logger_queue)
+                if config_plugin == "rss":
+                    plugin = MosquitoRSS(config_id, queue)
+                elif config_plugin == "twitter":
+                    plugin = MosquitoTwitter(config_id, queue)
 
-                messages = plugin.fetch(config_url)
+                messages = plugin.fetch(config_source)
 
                 count = 0
 
                 for message in messages:
                     message_timestamp = message[0]
                     message_url = message[2]
-                    original_content = message[1]
+                    message_title = message[1]
 
                     if message_timestamp > config_timestamp:
-                        if self._match_regex(original_content, config_regex, config_id, logger_queue):
-                            grabs = []
+                        if self._match_regex(message_title, config_regex, config_id, queue):
+                            grab_list = []
+                            tag_list = []
 
-                            execute = None
-
-                            mail_headers = []
                             mail_priority = None
                             mail_subject = None
 
+                            grabbed_images = []
                             grabbed_html = None
-                            grabbed_image = None
+                            grabbed_screenshot = None
                             grabbed_text = None
 
                             for action in config_regex_action:
-                                action_name = action.split('=')[0]
-                                action_value = action.split('=')[1]
+                                action_type = action.split("=")[0]
+                                action_value = action.split("=")[1]
 
-                                if action_name == 'execute':
-                                    execute = action_value
-                                elif action_name == 'grab':
-                                    grabs.append(action_value)
-                                elif action_name == 'header':
-                                    mail_headers.append(action_value)
-                                elif action_name == 'priority':
+                                if action_type == "grab":
+                                    grab_list.append(action_value)
+                                elif action_type == "priority":
                                     mail_priority = action_value
-                                elif action_name == 'subject':
+                                elif action_type == "subject":
                                     mail_subject = action_value
-
-                            #------------------------------------------------------------------------
-
-                            if grabs and message_url:
-                                for grab in grabs:
-                                    if grab == 'full':
-                                        grabbed_html = self._grab_content(message_url, 'html', config_id, logger_queue)
-                                        grabbed_image = self._grab_content(message_url, 'screenshot', config_id, logger_queue)
-                                        grabbed_text = self._grab_content(message_url, 'text', config_id, logger_queue)
-                                    elif grab == 'html':
-                                        grabbed_html = self._grab_content(message_url, grab, config_id, logger_queue)
-                                    elif grab == 'screenshot':
-                                        grabbed_image = self._grab_content(message_url, grab, config_id, logger_queue)
-                                    elif grab == 'text':
-                                        grabbed_text = self._grab_content(message_url, grab, config_id, logger_queue)
-
-                            #------------------------------------------------------------------------
-
-                            if execute:
-                                self._execute(execute, original_content, grabbed_html, grabbed_image, grabbed_text, config_id, logger_queue)
+                                elif action_type == "tag":
+                                    tag_list.append(action_value)
 
                             # ------------------------------------------------------------------------
-                            if mail_headers or mail_priority or mail_subject:
-                                # Change subject
-                                if mail_subject:
-                                    mail_subject = mail_subject + ' ' + original_content.split('\n', 1)[0]
-                                else:
-                                    mail_subject = original_content.split('\n', 1)[0]
+                            # Process a grab list
 
-                                if mail_subject:
-                                    if len(mail_subject) > self.settings.subject_length:
-                                        subject = mail_subject[:self.settings.subject_length] + ' ...'
+                            if grab_list and message_url:
+                                for grab in grab_list:
 
-                                    mail_subject = re.sub(r"https?:\/\/.*", "", mail_subject)
+                                    if grab == "full":
+                                        grabbed_images = self._grab_content(message_url, "images", config_id, queue, params=config_images_settings)
+                                        grabbed_html = self._grab_content(message_url, "html", config_id, queue)
+                                        grabbed_screenshot = self._grab_content(message_url, "screenshot", config_id, queue)
+                                        grabbed_text = self._grab_content(message_url, "text", config_id, queue)
 
-                                # Add default headers
-                                mail_headers.append('X-mosquito-id:' + str(config_id))
-                                mail_headers.append('X-mosquito-plugin:' + str(config_plugin))
-                                mail_headers.append('X-mosquito-source:' + str(config_url))
-                                mail_headers.append('X-mosquito-expanded-url:' + str(message_url))
+                                    elif grab == "images":
+                                        grabbed_images = self._grab_content(message_url, grab, config_id, queue, params=config_images_settings)
 
-                                # Set email priority
-                                if mail_priority:
-                                    if mail_priority == 'high':
-                                        mail_priority = '1'
-                                    elif mail_priority == 'normal':
-                                        mail_priority = '3'
-                                    elif mail_priority == 'low':
-                                        mail_priority = '5'
+                                    elif grab == "html":
+                                        grabbed_html = self._grab_content(message_url, grab, config_id, queue)
 
-                                # Append message URL
-                                original_content = original_content + '\n\n---\n{}'.format(message_url)
+                                    elif grab == "screenshot":
+                                        grabbed_screenshot = self._grab_content(message_url, grab, config_id, queue)
 
-                                if not mail.send(
-                                        config_destination, mail_headers, mail_priority, mail_subject,
-                                        original_content, grabbed_html, grabbed_image, grabbed_text
-                                ):
-                                    logger_queue.put([
+                                    elif grab == "text":
+                                        grabbed_text = self._grab_content(message_url, grab, config_id, queue)
+
+                            # ------------------------------------------------------------------------
+
+                            for destination in config_destination:
+                                k, v = destination.split(":", 1)
+
+                                if k == "exec":
+                                    exec.run(
                                         config_id,
-                                        "warning",
-                                        "SMTP server is not available. Add message to archive!"
-                                    ])
-
-                                    db.add_archive(
-                                        config_id, config_destination, mail_headers, mail_priority,
-                                        mail_subject, original_content, grabbed_html, grabbed_image,
-                                        grabbed_text, current_timestamp
+                                        v,                      # path to executable
+                                        tag_list,
+                                        message_title,
+                                        grabbed_html,
+                                        grabbed_screenshot,
+                                        grabbed_text,
+                                        grabbed_images
                                     )
+
+                                elif k == "mail":
+                                    mail_headers = tag_list
+
+                                    if mail_subject:
+                                        mail_subject = mail_subject + " " + message_title.split("\n", 1)[0]
+                                    else:
+                                        mail_subject = message_title.split("\n", 1)[0]
+
+                                    if mail_subject:
+                                        if len(mail_subject) > self.settings.subject_length:
+                                            mail_subject = mail_subject[:self.settings.subject_length] + " ..."
+
+                                        mail_subject = re.sub(r"https?:\/\/.*", "", mail_subject)
+
+                                    # Add default headers
+                                    mail_headers.append("X-mosquito-id:" + str(config_id))
+                                    mail_headers.append("X-mosquito-plugin:" + str(config_plugin))
+                                    mail_headers.append("X-mosquito-source:" + str(config_source))
+                                    mail_headers.append("X-mosquito-message-url:" + str(message_url))
+
+                                    # Set email priority
+                                    if mail_priority:
+                                        if mail_priority == "high":
+                                            mail_priority = "1"
+                                        elif mail_priority == "normal":
+                                            mail_priority = "3"
+                                        elif mail_priority == "low":
+                                            mail_priority = "5"
+
+                                    # Append URL to mail body
+                                    mail_body = message_title + "\n\n---\n{}".format(message_url)
+
+                                    if not mail.send(
+                                            v, mail_headers, mail_priority, mail_subject, mail_body, grabbed_html,
+                                            grabbed_screenshot, grabbed_text, grabbed_images
+                                    ):
+                                        queue.put([
+                                            config_id,
+                                            "warning",
+                                            "SMTP server is not available. Add message to archive!"
+                                        ])
+
+                                        db.add_archive(
+                                            config_id, v, mail_headers, mail_priority, mail_subject, mail_body,
+                                            grabbed_html, grabbed_screenshot, grabbed_text, current_timestamp
+                                        )
 
                             count += 1
                     else:
-                        logger_queue.put([
+                        queue.put([
                             config_id,
                             "debug",
                             "The message timestamp is lower than the config timestamp, skipping: {} < {}".format(
@@ -464,17 +497,18 @@ class MosquitoParallelFetching(object):
                     # Increase counter for a configuration
                     db.update_counter(config_id, count)
                 else:
-                    # Check if we haven't received the new data during a specific interval
+                    # Check if we haven't received new data during a specific interval
                     if current_timestamp > (config_timestamp + int(config_update_alert)):
-                        logger_queue.put([
+                        queue.put([
                             config_id,
                             "warning",
                             "No new data for the configuration: {}".format(config_id)
                         ])
 
                         # Check if we are reached "alert_interval". If so, send a letter.
-                        if current_timestamp > (int(config_alert_timestamp) + self._validate_interval(self.settings.alert_interval)):
-                            logger_queue.put([
+                        if current_timestamp > (int(config_alert_timestamp) +
+                                                self._validate_interval(self.settings.alert_interval)):
+                            queue.put([
                                 config_id,
                                 "warning",
                                 "Alert interval reached. Sending an alert email: {}".format(config_id)
@@ -482,13 +516,13 @@ class MosquitoParallelFetching(object):
 
                             if mail.send(
                                 config_destination, None, None, self.settings.alert_subject,
-                                '{} -> {} -> {}'.format(
-                                    config_id, config_plugin, config_url
+                                "{} -> {} -> {}".format(
+                                    config_id, config_plugin, config_source
                                 ), None, None, None
                             ):
                                 db.update_alert_timestamp(config_id, current_timestamp)
             else:
-                logger_queue.put([
+                queue.put([
                     config_id,
                     "info",
                     "Update interval hasn't been reached, skipping: {}".format(config_id)
@@ -497,7 +531,7 @@ class MosquitoParallelFetching(object):
                 return False
 
         else:
-            logger_queue.put([
+            queue.put([
                 config_id,
                 "info",
                 "Configuration is disabled, skipping: {}".format(config_id)
@@ -505,7 +539,7 @@ class MosquitoParallelFetching(object):
 
             return False
 
-        logger_queue.put([
+        queue.put([
             config_id,
             "info",
             "Configuration has been processed: {}".format(config_id)
@@ -599,12 +633,12 @@ class Mosquito(object):
         self.settings = MosquitoSettings()
 
         coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s  %(message)s'
-        coloredlogs.install(level=self.settings.verbose)
+        coloredlogs.install(level=self.settings.log_level)
 
         self.logger = logging.getLogger('[MAIN]')
 
         # Hide HTTP requests
-        if self.settings.verbose.upper() != 'DEBUG':
+        if self.settings.log_level.upper() != 'DEBUG':
             logging.getLogger("requests").setLevel(logging.WARNING)
 
         # Hide feedparser deprecation warnings
@@ -638,7 +672,11 @@ class Mosquito(object):
         parser_create.add_argument('--update-interval', default=self.settings.update_interval, help=self.help.create6)
         parser_create.add_argument('--description', nargs='+', help=self.help.create7)
         parser_create.add_argument('--regex', nargs='+', default=self.settings.regex, help=self.help.create8)
-        parser_create.add_argument('--regex-action', nargs='+', default=self.settings.regex_action, help=self.help.create9)
+        parser_create.add_argument('--regex-action', nargs='+', default=self.settings.regex_action,
+                                   help=self.help.create9)
+        parser_create.add_argument('--images-settings', nargs='+',
+                                   default=['min:' + self.settings.images_min, 'max:' + self.settings.images_max],
+                                   help=self.help.create10)
         parser_create.set_defaults(func=self.create)
 
         # Create 'delete' parser
@@ -673,15 +711,16 @@ class Mosquito(object):
         parser_set.add_argument('--description', nargs='+', help=self.help.set9)
         parser_set.add_argument('--regex', nargs='+', help=self.help.set10)
         parser_set.add_argument('--regex-action', nargs='+', help=self.help.set11)
+        parser_set.add_argument('--images-settings', nargs='+', help=self.help.set12)
         parser_set.set_defaults(func=self.set)
 
         args = parser.parse_args()
 
-        try:
-            args.func(args)
-        except AttributeError:
-            parser.print_help()
-            sys.exit(0)
+        #try:
+        args.func(args)
+        #except AttributeError:
+        #    parser.print_help()
+        #    sys.exit(0)
 
     def _human_time(self, seconds):
         """ Convert seconds to human time """
@@ -713,81 +752,94 @@ class Mosquito(object):
                 subject = record[5]
                 original_content = record[6]
                 grabbed_html = record[7]
-                grabbed_image = record[8]
+                grabbed_screenshot = record[8]
                 grabbed_text = record[9]
 
                 if self.mail.send(destinations, headers, priority, subject, original_content, grabbed_html,
-                                  grabbed_image, grabbed_text):
+                                  grabbed_screenshot, grabbed_text):
 
                     self.logger.warning('Archived records are sending ...')
                     self.db.delete_archive(id)
 
-    def _validate_action(self, value):
+    def _validate_action(self, destinations, actions):
         """
         Validate actions types:
         "execute" - execute script if data matches
         "grab" - fetch data in different formats
-        "header" - add a header to an email
         "priority" - set priority for an email
         "subject" - set subject for an email
+        "tag" - add a tag to an email or pass a tag to executable
         """
 
-        if value:
-            action_type = value.split('=')[0]
+        available_actions = []
 
-            if action_type == 'execute':
-                try:
-                    script_path = value.split('=')[1]
-                    if not script_path:
-                        raise Exception
+        if destinations:
+            for destination in destinations:
+                k, v = destination.split(":", 1)
 
-                except Exception:
-                    self.logger.error("Action 'execute' must have a value (execute=/path/to/script)")
+                if k == "exec":
+                    available_actions.extend(["grab", "tag"])
+                elif k == "mail":
+                    available_actions.extend(["grab", "priority", "subject", "tag"])
+
+        available_actions = list(set(available_actions))
+
+        if actions:
+            for action in actions:
+                action_type = action.split("=")[0]
+
+                if action_type in available_actions:
+                    if action_type == "grab":
+                        try:
+                            grab_content = action.split("=")[1]
+                            if grab_content != "full" and grab_content != "html" and grab_content != "images" and \
+                                    grab_content != "screenshot" and grab_content != "text":
+                                raise Exception
+
+                        except Exception:
+                            self.logger.error("Action \"grab\" must be in format: grab=html|images|screenshot|text")
+                            sys.exit(1)
+
+                    elif action_type == "tag":
+                        try:
+                            tag_name = action.split("=")[1].split(":")[0]
+                            tag_value = action.split("=")[1].split(":")[1]
+                            if not tag_name or not tag_value:
+                                raise Exception
+
+                        except Exception:
+                            self.logger.error("Action \"tag\" must be in format: tag=Foo:Bar")
+                            sys.exit(1)
+
+                    elif action_type == "priority":
+                        try:
+                            priority_type = action.split("=")[1]
+                            if priority_type != "high" and priority_type != "normal" and priority_type != "low":
+                                raise Exception
+
+                        except Exception:
+                            self.logger.error("Action \"priority\" must be in format: priority=low|normal|high")
+                            sys.exit(1)
+
+                    elif action_type == "subject":
+                        try:
+                            subject_text = action.split("=")[1]
+                            if not subject_text:
+                                raise Exception
+
+                        except Exception:
+                            self.logger.error("Action \"subject\" must be in format: subject=FooBar")
+                            sys.exit(1)
+                    else:
+                        self.logger.error("Action type doesn't exist: {}".format(action_type))
+                        sys.exit(1)
+                else:
+                    self.logger.error(
+                        "There are no destinations whose support this type of an action: \"{}\"".format(action_type)
+                    )
                     sys.exit(1)
 
-            elif action_type == 'grab':
-                try:
-                    grab_content = value.split('=')[1]
-                    if grab_content != 'full' and grab_content != 'html' and grab_content != 'screenshot' and grab_content != 'text':
-                        raise Exception
-
-                except Exception:
-                    self.logger.error("Action 'grab' must have a value (grab=text)")
-                    sys.exit(1)
-
-            elif action_type == 'header':
-                try:
-                    header_name = value.split('=')[1].split(':')[0]
-                    header_value = value.split('=')[1].split(':')[1]
-                    if not header_name or not header_value:
-                        raise Exception
-
-                except Exception:
-                    self.logger.error("Action 'header' must have a value (header=X-custom-header:value)")
-                    sys.exit(1)
-
-            elif action_type == 'priority':
-                try:
-                    priority_type = value.split('=')[1]
-                    if priority_type != 'high' and priority_type != 'normal' and priority_type != 'low':
-                        raise Exception
-
-                except Exception:
-                    self.logger.error("Action 'priority' must have a value (priority=low)")
-                    sys.exit(1)
-            elif action_type == 'subject':
-                try:
-                    subject_text = value.split('=')[1]
-                    if not subject_text:
-                        raise Exception
-                except Exception:
-                    self.logger.error("Action 'subject' must have a value (subject=FooBar)")
-                    sys.exit(1)
-            else:
-                self.logger.error("Action type doesn't exist: {}".format(action_type))
-                sys.exit(1)
-
-        return value
+        return actions
 
     def _validate_confirmation(self, question):
         """ Ask user confirmation """
@@ -810,24 +862,38 @@ class Mosquito(object):
 
             return data
 
-    def _validate_destination(self, emails):
-        """ Validate destination emails """
+    def _validate_destination(self, params):
+        """ Validate destinations  """
+        status = True
 
-        if emails:
-            emails_valid = []
+        if params:
+            for param in params:
+                try:
+                    k, v = param.split(":", 1)
 
-            for email in emails:
-                if not validators.email(email):
-                    self.logger.error("Destination must be a valid email: {}".format(email))
-                else:
-                    emails_valid.append(email)
+                    if k not in ["exec", "mail"]:
+                        raise NameError("There are no valid destinations!")
 
-            if len(emails_valid) > 0:
-                return emails_valid
+                    if k == "exec":
+                        if not os.path.isfile(v):
+                            raise NameError("There is no valid executable file!")
 
-            else:
-                self.logger.error("There are no valid destination emails!")
-                sys.exit(1)
+                    if k == "mail":
+                        if not validators.email(v):
+                            raise NameError("There are no valid emails!")
+
+                except NameError as error:
+                    self.logger.error(error)
+                    status = False
+
+                except Exception:
+                    self.logger.error("There are no valid destinations! See documentation for available destinations.")
+                    status = False
+
+        if status:
+            return params
+        else:
+            sys.exit(1)
 
     def _validate_interval(self, interval):
         """
@@ -857,6 +923,28 @@ class Mosquito(object):
             else:
                 self.logger.error("Time interval must be a digit or a digit with suffix: {}".format(interval))
                 sys.exit(1)
+
+    def _validate_images_settings(self, params):
+        status = True
+
+        if params:
+            for param in params:
+                try:
+                    k, v = param.split(':')
+                    w, h = v.split('x')
+
+                    if k not in ['min', 'max']:
+                        raise Exception
+
+                    int(w), int(h)
+                except:
+                    status = False
+
+        if status:
+            return params
+        else:
+            self.logger.error("There are no valid images size! Check your input and/or configuration file!")
+            sys.exit(1)
 
     def _validate_plugin(self, plugin):
         """ Supported plugins """
@@ -898,15 +986,12 @@ class Mosquito(object):
         update_interval = self._validate_interval(args.update_interval)
         description = self._validate_description(args.description)
         regex = args.regex
-        regex_action = args.regex_action
-
-        if regex_action:
-            for action in regex_action:
-                self._validate_action(action)
+        regex_action = self._validate_action(destination, args.regex_action)
+        images_settings = self._validate_images_settings(args.images_settings)
 
         self.db.create(
             'True', plugin, source, destination, update_alert, update_interval, description, regex, regex_action,
-            '0', '0', '0'
+            '0', '0', '0', images_settings
         )
 
     def delete(self, args):
@@ -983,7 +1068,7 @@ class Mosquito(object):
 
         table = [[
                   'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 'Alert', 'Interval', 'Desc', 'Regex',
-                  'Regex action', 'Last update', 'Count'
+                  'Regex Action', 'Images Settings', 'Last Update', 'Count'
                 ]]
 
         configs = []
@@ -1014,7 +1099,7 @@ class Mosquito(object):
                         config[0], config[1], config[2], '\n'.join(wrap(str(config[3]), 42)),
                         '\n'.join(ast.literal_eval(config[4])), self._human_time(int(config[5])),
                         self._human_time(int(config[6])), '\n'.join(wrap(str(config[7]), 30)),
-                        '\n'.join(ast.literal_eval(config[8])), '\n'.join(ast.literal_eval(config[9])),
+                        '\n'.join(ast.literal_eval(config[8])), '\n'.join(ast.literal_eval(config[9])), '\n'.join(ast.literal_eval(config[13])),
                         datetime.fromtimestamp(int(config[10])), config[11]
                     ])
                     
@@ -1038,12 +1123,13 @@ class Mosquito(object):
         enabled = args.enabled
         plugins = self._validate_plugin(args.plugin)
         source = args.source
-        destination = self._validate_destination(args.destination)
+        destination = args.destination
         update_alert = self._validate_interval(args.update_alert)
         update_interval = self._validate_interval(args.update_interval)
         description = self._validate_description(args.description)
         regex = args.regex
-        regex_action = self._validate_action(args.regex_action)
+        regex_action = args.regex_action
+        images_settings = self._validate_images_settings(args.images_settings)
 
         configs = []
 
@@ -1083,9 +1169,9 @@ class Mosquito(object):
                         config_source = config[3]
 
                     if destination:
-                        config_destination = destination
+                        config_destination = self._validate_destination(destination)
                     else:
-                        config_destination = config[4]
+                        config_destination = ast.literal_eval(config[4])
 
                     if update_alert:
                         config_update_alert = update_alert
@@ -1108,9 +1194,14 @@ class Mosquito(object):
                         config_regex = config[8]
 
                     if regex_action:
-                        config_regex_action = regex_action
+                        config_regex_action = self._validate_action(config_destination, regex_action)
                     else:
-                        config_regex_action = config[9]
+                        config_regex_action = self._validate_action(config_destination, ast.literal_eval(config[9]))
+
+                    if images_settings:
+                        config_images_settings = images_settings
+                    else:
+                        config_images_settings = config[13]
 
                     config_plugin = config[2]
                     config_timestamp = config[10]
@@ -1120,7 +1211,7 @@ class Mosquito(object):
                     self.db.update(
                         config_id, config_enabled, config_plugin, config_source, config_destination, config_update_alert,
                         config_update_interval, config_description, config_regex, config_regex_action, config_timestamp,
-                        config_counter, config_alert_timestamp
+                        config_counter, config_alert_timestamp, config_images_settings
                     )
         else:
             self.logger.info("There are no configurations for changes!")
