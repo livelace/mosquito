@@ -518,7 +518,7 @@ class MosquitoParallelFetching(object):
                                 config_destination, None, None, self.settings.alert_subject,
                                 "{} -> {} -> {}".format(
                                     config_id, config_plugin, config_source
-                                ), None, None, None
+                                ), None, None, None, None
                             ):
                                 db.update_alert_timestamp(config_id, current_timestamp)
             else:
