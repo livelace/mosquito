@@ -63,12 +63,17 @@
 ```
 [main]
 
+# Email address that use for alerts
+alert_email = user@example.com
+
 # Frequency of an alert email for sources which don't have new data.
 # "s" - seconds
 # "m" - minutes
 # "h" - hours
 # "d" - days
 alert_interval = 1d
+
+# Subject for alert emails 
 alert_subject = ***Mosquito: No new data ***
 
 # Set custom mime type and name for attachments. It could be need for ELK imap plugin, for instance :)

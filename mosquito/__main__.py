@@ -514,13 +514,27 @@ class MosquitoParallelFetching(object):
                                 "Alert interval reached. Sending an alert email: {}".format(config_id)
                             ])
 
-                            if mail.send(
-                                config_destination, None, None, self.settings.alert_subject,
-                                "{} -> {} -> {}".format(
-                                    config_id, config_plugin, config_source
-                                ), None, None, None, None
-                            ):
-                                db.update_alert_timestamp(config_id, current_timestamp)
+                            if self.settings.alert_email:
+                                if mail.send(
+                                        self.settings.alert_email,
+                                        None,
+                                        None,
+                                        self.settings.alert_subject,
+                                        "{} -> {} -> {}".format(config_id, config_plugin, config_source),
+                                        None,
+                                        None,
+                                        None,
+                                        None
+                                ):
+                                    db.update_alert_timestamp(config_id, current_timestamp)
+                            else:
+                                queue.put([
+                                    config_id,
+                                    "warning",
+                                    """Alert email address doesn't set, warnings about absence of new data will 
+                                    be shown only in console."""
+                                ])
+
             else:
                 queue.put([
                     config_id,

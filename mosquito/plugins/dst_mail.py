@@ -119,7 +119,7 @@ class MosquitoMail(object):
                 msg['From'] = self.settings.smtp_from
                 msg['To'] = email
 
-                # Set a custom header
+                # Add headers
                 if headers:
                     for header in headers:
                         msg.add_header(header.split(':', 1)[0], header.split(':', 1)[1])
@@ -204,5 +204,6 @@ class MosquitoMail(object):
                 )
 
                 return False
+
         else:
             return False

@@ -21,6 +21,7 @@ class MosquitoSettings(object):
         
         settings = configparser.RawConfigParser(
             {
+                'alert_email': None,
                 'alert_interval': '1d',
                 'alert_subject': '***Mosquito: No new data ***',
                 'attachment_mime': 'logstash',
@@ -57,6 +58,7 @@ class MosquitoSettings(object):
             settings.read(inifile)
             
             self.destination = self._parse_variables(settings.get('main', 'destination'))
+            self.alert_email = settings.get('main', 'alert_email')
             self.alert_interval = settings.get('main', 'alert_interval')
             self.alert_subject = settings.get('main', 'alert_subject')
             self.attachment_mime = settings.get('main', 'attachment_mime')
