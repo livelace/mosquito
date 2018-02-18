@@ -756,7 +756,7 @@ class Mosquito(object):
                 grabbed_text = record[9]
 
                 if self.mail.send(destinations, headers, priority, subject, original_content, grabbed_html,
-                                  grabbed_screenshot, grabbed_text):
+                                  grabbed_screenshot, grabbed_text, None):
 
                     self.logger.warning('Archived records are sending ...')
                     self.db.delete_archive(id)
