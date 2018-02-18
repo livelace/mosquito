@@ -532,7 +532,7 @@ class MosquitoParallelFetching(object):
                                     config_id,
                                     "warning",
                                     ("Alert email address doesn't set, warnings about absence of new data will be"
-                                     "shown only in console.")
+                                     " shown only in console.")
                                 ])
 
             else:
