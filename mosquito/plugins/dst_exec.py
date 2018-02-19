@@ -67,7 +67,7 @@ class MosquitoExec(object):
                     "Cannot write data to a temporary file: {} -> {}".format(filename, error)
                 )
 
-    def run(self, config_id, exec_path, tags, title, html, screenshot, text, images):
+    def run(self, config_id, exec_path, timestamp, tags, title, html, screenshot, text, images):
         working_path = self.settings.exec_path + "/" + str(config_id) + "/" + str(uuid4())
 
         if not os.path.isdir(working_path):
@@ -110,6 +110,7 @@ class MosquitoExec(object):
             subprocess.call(
                 [
                     exec_path,
+                    str(timestamp),
                     ",".join(tags),
                     working_path
                 ]

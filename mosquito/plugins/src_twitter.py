@@ -82,13 +82,13 @@ class MosquitoTwitter(object):
                     return messages
 
             for post in posts:
-                expanded_url = None
+                url = None
                 timestamp = time.mktime(datetime.strptime(post.created_at, '%a %b %d %H:%M:%S +0000 %Y').timetuple())
 
                 if len(post.urls) > 0:
-                    expanded_url = post.urls[0].expanded_url
+                    url = post.urls[0].expanded_url
 
-                messages.append([timestamp, post.text, expanded_url])
+                messages.append([int(timestamp), post.text, url])
 
             self._logger(
                 "debug",

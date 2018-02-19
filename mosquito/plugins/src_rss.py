@@ -84,25 +84,39 @@ class MosquitoRSS(object):
                 if len(post.links[0]['href']) > 0:
                     url = post.links[0]['href']
             except Exception:
-                pass
+                self._logger(
+                    "warning",
+                    "Cannot find an URL in a post"
+                )
 
             # Get timestamp from a post
             try:
                 timestamp = time.mktime(post.updated_parsed)
             except Exception:
-                pass
+                self._logger(
+                    "warning",
+                    "Cannot find timestamp of a post"
+                )
 
             if not timestamp:
                 try:
                     timestamp = time.mktime(post.published_parsed)
                 except Exception:
-                    pass
+                    self._logger(
+                        "warning",
+                        "Cannot find timestamp of a post"
+                    )
 
             # Make timestamp based on current time if there are no any internal timestamps in a post
             if not timestamp:
+                self._logger(
+                    "warning",
+                    "Set current timestamp as a post timestamp"
+                )
+
                 timestamp = time.mktime(datetime.utcnow().timetuple())
                 
-            messages.append([timestamp, post.title, url])
+            messages.append([int(timestamp), post.title, url])
 
         self._logger(
             "debug",
