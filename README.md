@@ -19,9 +19,9 @@
 * **exec** - execute a script with arguments  
   e.g. exec:/path/to/script.sh
   
-  **$1** - a message timestamp (date a time of a publication)  
+  **$1** - a message timestamp (date and time of a publication)  
   **$2** - a comma separated list of tags  
-  **$3** - path to a directory with grabbed content
+  **$3** - a path to a directory with grabbed content
 
   multiple options are supported
 
