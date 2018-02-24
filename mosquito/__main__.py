@@ -615,7 +615,7 @@ class MosquitoParallelFetching(object):
 
         # ----------------------------------------------------------------------------
 
-        chunk_size = int((configs_number / pool_size) + 1)
+        chunk_size = int(configs_number / pool_size)
 
         self.logger.info("Chunk size of the pool: {}".format(chunk_size))
 
