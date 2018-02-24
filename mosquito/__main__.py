@@ -365,7 +365,7 @@ class MosquitoParallelFetching(object):
                 for message in messages:
                     message_timestamp = message[0]
                     message_url = message[2]
-                    message_title = message[1]
+                    message_title = re.sub(r"https?:\/\/.*", "", message[1])
 
                     if message_timestamp > config_timestamp:
                         if self._match_regex(message_title, config_regex, config_id, queue):
@@ -432,7 +432,7 @@ class MosquitoParallelFetching(object):
                                             "source:" + str(config_source),
                                             "url:" + str(message_url)
                                         ] + tag_list,
-                                        re.sub(r"https?:\/\/.*", "", message_title),
+                                        message_title,
                                         grabbed_html,
                                         grabbed_screenshot,
                                         grabbed_text,
@@ -450,8 +450,6 @@ class MosquitoParallelFetching(object):
                                     if mail_subject:
                                         if len(mail_subject) > self.settings.subject_length:
                                             mail_subject = mail_subject[:self.settings.subject_length] + " ..."
-
-                                        mail_subject = re.sub(r"https?:\/\/.*", "", mail_subject)
 
                                     # Add default headers
                                     mail_headers.append("X-mosquito-id:" + str(config_id))
