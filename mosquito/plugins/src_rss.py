@@ -115,8 +115,14 @@ class MosquitoRSS(object):
                 )
 
                 timestamp = time.mktime(datetime.utcnow().timetuple())
+
+            # Try to obtain title of a post
+            try:
+                title = post.title
+            except Exception:
+                title = "None"
                 
-            messages.append([int(timestamp), post.title, url])
+            messages.append([int(timestamp), title, url])
 
         self._logger(
             "debug",
