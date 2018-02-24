@@ -432,7 +432,7 @@ class MosquitoParallelFetching(object):
                                             "source:" + str(config_source),
                                             "url:" + str(message_url)
                                         ] + tag_list,
-                                        message_title,
+                                        re.sub(r"https?:\/\/.*", "", message_title),
                                         grabbed_html,
                                         grabbed_screenshot,
                                         grabbed_text,
