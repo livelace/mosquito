@@ -616,7 +616,7 @@ class MosquitoParallelFetching(object):
         # ----------------------------------------------------------------------------
 
         if (configs_number % pool_size) == 0:
-            chunk_size = configs_number / pool_size
+            chunk_size = int(configs_number / pool_size)
         else:
             chunk_size = int((configs_number / pool_size) + 1)
 
