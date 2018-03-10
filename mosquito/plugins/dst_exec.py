@@ -82,7 +82,7 @@ class MosquitoExec(object):
                 return False
 
         if not tags:
-            tags = ["None"]
+            tags = {"None": "None"}
 
         self._write(working_path + "/title.txt", title, "w")
         self._write(working_path + "/content.html", html, "w")
@@ -111,7 +111,7 @@ class MosquitoExec(object):
                 [
                     exec_path,
                     str(timestamp),
-                    ";".join(tags),
+                    ";".join("{}:{}".format(key, value) for key, value in tags.items()),
                     working_path
                 ]
             )

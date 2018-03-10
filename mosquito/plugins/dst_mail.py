@@ -121,8 +121,8 @@ class MosquitoMail(object):
 
                 # Add headers
                 if headers:
-                    for header in headers:
-                        msg.add_header(header.split(':', 1)[0], header.split(':', 1)[1])
+                    for name, value in headers.items():
+                        msg.add_header(name, value)
 
                 # Set a priority
                 if priority:

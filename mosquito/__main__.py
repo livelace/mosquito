@@ -337,8 +337,9 @@ class MosquitoParallelFetching(object):
         config_timestamp = config[10]
         config_alert_timestamp = config[12]
         config_images_settings = ast.literal_eval(config[13])
+        config_url_tags = ast.literal_eval(config[14])
         current_timestamp = time.mktime(datetime.utcnow().timetuple())
-        queue = config[14]
+        queue = config[15]
 
         db = MosquitoDB(config_id, queue)
         exec = MosquitoExec(config_id, queue)
@@ -370,7 +371,7 @@ class MosquitoParallelFetching(object):
                     if message_timestamp > config_timestamp:
                         if self._match_regex(message_title, config_regex, config_id, queue):
                             grab_list = []
-                            tag_list = []
+                            tags = {}
 
                             mail_priority = None
                             mail_subject = None
@@ -391,7 +392,17 @@ class MosquitoParallelFetching(object):
                                 elif action_type == "subject":
                                     mail_subject = action_value
                                 elif action_type == "tag":
-                                    tag_list.append(action_value)
+                                    tag_name, tag_value = action_value.split(":")
+                                    tags[tag_name] = tag_value
+
+                            if message_url:
+                                for url_tag in config_url_tags:
+                                    url, tag = url_tag.split(":",1)
+
+                                    if re.search(url, message_url):
+                                        tag = tag.split("=")
+                                        tag_name, tag_value = tag[1].split(":")
+                                        tags[tag_name] = tag_value
 
                             # ------------------------------------------------------------------------
                             # Process a grab list
@@ -423,15 +434,15 @@ class MosquitoParallelFetching(object):
                                 k, v = destination.split(":", 1)
 
                                 if k == "exec":
+                                    tags["id"] = str(config_id)
+                                    tags["plugin"] = str(config_plugin)
+                                    tags["source"] = str(config_source)
+                                    tags["url"] = str(message_url)
+
                                     exec.run(
                                         v,                      # path to executable
                                         message_timestamp,
-                                        [
-                                            "id:" + str(config_id),
-                                            "plugin:" + str(config_plugin),
-                                            "source:" + str(config_source),
-                                            "url:" + str(message_url)
-                                        ] + tag_list,
+                                        tags,
                                         message_title,
                                         grabbed_html,
                                         grabbed_screenshot,
@@ -440,7 +451,7 @@ class MosquitoParallelFetching(object):
                                     )
 
                                 elif k == "mail":
-                                    mail_headers = tag_list
+                                    mail_headers = tags
 
                                     if mail_subject:
                                         mail_subject = mail_subject + " " + message_title.split("\n", 1)[0]
@@ -452,10 +463,10 @@ class MosquitoParallelFetching(object):
                                             mail_subject = mail_subject[:self.settings.subject_length] + " ..."
 
                                     # Add default headers
-                                    mail_headers.append("X-mosquito-id:" + str(config_id))
-                                    mail_headers.append("X-mosquito-plugin:" + str(config_plugin))
-                                    mail_headers.append("X-mosquito-source:" + str(config_source))
-                                    mail_headers.append("X-mosquito-message-url:" + str(message_url))
+                                    mail_headers["X-mosquito-id"] = str(config_id)
+                                    mail_headers["X-mosquito-plugin"] = str(config_plugin)
+                                    mail_headers["X-mosquito-source"] = str(config_source)
+                                    mail_headers["X-mosquito-message-url"] = str(message_url)
 
                                     # Set email priority
                                     if mail_priority:
@@ -697,6 +708,7 @@ class Mosquito(object):
         parser_create.add_argument('--images-settings', nargs='+',
                                    default=['min:' + self.settings.images_min, 'max:' + self.settings.images_max],
                                    help=self.help.create10)
+        parser_create.add_argument('--url-tags', nargs='+', default=[], help=self.help.create11)
         parser_create.set_defaults(func=self.create)
 
         # Create 'delete' parser
@@ -717,6 +729,7 @@ class Mosquito(object):
         parser_list = subparsers.add_parser('list', help=self.help.list1)
         parser_list.add_argument('--plugin', nargs='+', help=self.help.list2)
         parser_list.add_argument('--id', nargs='+', help=self.help.list3)
+        parser_list.add_argument('--short', action='store_true', help=self.help.list4)
         parser_list.set_defaults(func=self.list)
 
         # Create 'set' parser
@@ -732,6 +745,7 @@ class Mosquito(object):
         parser_set.add_argument('--regex', nargs='+', help=self.help.set10)
         parser_set.add_argument('--regex-action', nargs='+', help=self.help.set11)
         parser_set.add_argument('--images-settings', nargs='+', help=self.help.set12)
+        parser_set.add_argument('--url-tags', nargs='+', help=self.help.set13)
         parser_set.set_defaults(func=self.set)
 
         args = parser.parse_args()
@@ -966,6 +980,32 @@ class Mosquito(object):
             self.logger.error("There are no valid images size! Check your input and/or configuration file!")
             sys.exit(1)
 
+    def _validate_url_tags(self, params):
+        status = True
+
+        if params:
+            for param in params:
+                try:
+                    k, v = param.split(':', 1)
+
+                    if not re.fullmatch("[A-Za-z0-9_.~]+", k):
+                        raise Exception
+
+                    tag = v.split("=")
+                    tag_name, tag_value = tag[1].split(":")
+
+                    if not tag_name or not tag_value:
+                        raise Exception
+
+                except Exception:
+                    status = False
+
+        if status:
+            return params
+        else:
+            self.logger.error("There are no valid URL tags! Check your input and/or configuration file!")
+            sys.exit(1)
+
     def _validate_plugin(self, plugin):
         """ Supported plugins """
 
@@ -1008,10 +1048,11 @@ class Mosquito(object):
         regex = args.regex
         regex_action = self._validate_action(destination, args.regex_action)
         images_settings = self._validate_images_settings(args.images_settings)
+        url_tags = self._validate_url_tags(args.url_tags)
 
         self.db.create(
             'True', plugin, source, destination, update_alert, update_interval, description, regex, regex_action,
-            '0', '0', '0', images_settings
+            '0', '0', '0', images_settings, url_tags
         )
 
     def delete(self, args):
@@ -1086,10 +1127,15 @@ class Mosquito(object):
     def list(self, args):
         """ List configurations """
 
-        table = [[
-                  'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 'Alert', 'Interval', 'Desc', 'Regex',
-                  'Regex Action', 'Images', 'Update', 'Count'
-                ]]
+        if args.short:
+            table = [[
+                'ID', 'Source', 'Destination', 'Regex', 'Regex Action', 'Images', 'URL Tags'
+            ]]
+        else:
+            table = [[
+                      'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 'Alert', 'Interval', 'Desc', 'Regex',
+                      'Regex Action', 'Images', 'URL Tags', 'Update', 'Count'
+            ]]
 
         configs = []
 
@@ -1115,27 +1161,61 @@ class Mosquito(object):
         if configs:
             for config in configs:
                 if len(config) > 0:
-                    table.append([
-                        config[0], config[1], config[2], '\n'.join(wrap(str(config[3]), 15)),
-                        '\n'.join(ast.literal_eval(config[4])), self._human_time(int(config[5])),
-                        self._human_time(int(config[6])), '\n'.join(wrap(str(config[7]), 20)),
-                        '\n'.join(ast.literal_eval(config[8])), '\n'.join(ast.literal_eval(config[9])), '\n'.join(ast.literal_eval(config[13])),
-                        datetime.fromtimestamp(int(config[10])), config[11]
-                    ])
-                    
+                    if args.short:
+                        table.append([
+                            config[0],
+                            '\n'.join(wrap(str(config[3]))),
+                            '\n'.join(ast.literal_eval(config[4])),
+                            '\n'.join(ast.literal_eval(config[8])),
+                            '\n'.join(ast.literal_eval(config[9])),
+                            '\n'.join(ast.literal_eval(config[13])),
+                            '\n'.join(ast.literal_eval(config[14]))
+                        ])
+                    else:
+                        table.append([
+                            config[0],
+                            config[1],
+                            config[2],
+                            '\n'.join(wrap(str(config[3]))),
+                            '\n'.join(ast.literal_eval(config[4])),
+                            self._human_time(int(config[5])),
+                            self._human_time(int(config[6])),
+                            '\n'.join(wrap(str(config[7]), 20)),
+                            '\n'.join(ast.literal_eval(config[8])),
+                            '\n'.join(ast.literal_eval(config[9])),
+                            '\n'.join(ast.literal_eval(config[13])),
+                            '\n'.join(ast.literal_eval(config[14])),
+                            datetime.fromtimestamp(int(config[10])),
+                            config[11]
+                        ])
+
         if len(table) > 1:
             table = AsciiTable(table)
-            table.justify_columns[0] = 'center'
-            table.justify_columns[1] = 'center'
-            table.justify_columns[2] = 'center'
-            table.justify_columns[3] = 'center'
-            table.justify_columns[4] = 'center'
-            table.justify_columns[5] = 'center'
-            table.justify_columns[6] = 'center'
-            table.justify_columns[7] = 'center'
-            table.justify_columns[10] = 'center'
-            table.justify_columns[11] = 'center'
             table.inner_row_border = True
+
+            if args.short:
+                table.justify_columns[0] = 'center'
+                table.justify_columns[1] = 'center'
+                table.justify_columns[2] = 'left'
+                table.justify_columns[3] = 'left'
+                table.justify_columns[4] = 'left'
+                table.justify_columns[5] = 'left'
+            else:
+                table.justify_columns[0] = 'center'
+                table.justify_columns[1] = 'center'
+                table.justify_columns[2] = 'center'
+                table.justify_columns[3] = 'left'
+                table.justify_columns[4] = 'left'
+                table.justify_columns[5] = 'center'
+                table.justify_columns[6] = 'center'
+                table.justify_columns[7] = 'left'
+                table.justify_columns[8] = 'center'
+                table.justify_columns[9] = 'left'
+                table.justify_columns[10] = 'left'
+                table.justify_columns[11] = 'left'
+                table.justify_columns[12] = 'center'
+                table.justify_columns[13] = 'center'
+
             print(table.table)
         else:
             self.logger.info('There are no configurations!')
@@ -1154,6 +1234,7 @@ class Mosquito(object):
         regex = args.regex
         regex_action = args.regex_action
         images_settings = self._validate_images_settings(args.images_settings)
+        url_tags = self._validate_url_tags(args.url_tags)
 
         configs = []
 
@@ -1227,6 +1308,11 @@ class Mosquito(object):
                     else:
                         config_images_settings = config[13]
 
+                    if url_tags:
+                        config_url_tags = url_tags
+                    else:
+                        config_url_tags = config[14]
+
                     config_plugin = config[2]
                     config_timestamp = config[10]
                     config_counter = config[11]
@@ -1235,7 +1321,7 @@ class Mosquito(object):
                     self.db.update(
                         config_id, config_enabled, config_plugin, config_source, config_destination, config_update_alert,
                         config_update_interval, config_description, config_regex, config_regex_action, config_timestamp,
-                        config_counter, config_alert_timestamp, config_images_settings
+                        config_counter, config_alert_timestamp, config_images_settings, config_url_tags
                     )
         else:
             self.logger.info("There are no configurations for changes!")

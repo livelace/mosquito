@@ -34,7 +34,8 @@ class MosquitoDB(object):
                                                 timestamp INTEGER NOT NULL,
                                                 counter INTEGER,
                                                 alert_timestamp INTEGER NOT NULL,
-                                                images_settings TEXT
+                                                images_settings TEXT,
+                                                url_tags TEXT
                     )
                     """
                 )
@@ -133,19 +134,20 @@ class MosquitoDB(object):
             )
         
     def create(self, enabled, plugin, source, destination, update_alert, update_interval, description, regex,
-               regex_action, timestamp, counter, alert_timestamp, images_settings):
+               regex_action, timestamp, counter, alert_timestamp, images_settings, url_tags):
         
         try:
             sql = """INSERT INTO configuration (
                                                 enabled, plugin, source, destination, 
                                                 update_alert, update_interval, 
                                                 description, regexp, regexp_action, 
-                                                timestamp, counter, alert_timestamp, images_settings
-                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?);"""
+                                                timestamp, counter, alert_timestamp, images_settings, url_tags
+                                                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);"""
 
             conn = sqlite3.connect(self.db)
             conn.execute(sql, [enabled, plugin, source, str(destination), update_alert, update_interval, description,
-                               str(regex), str(regex_action), timestamp, counter, alert_timestamp, str(images_settings)])
+                               str(regex), str(regex_action), timestamp, counter, alert_timestamp,
+                               str(images_settings), str(url_tags)])
             conn.commit()
 
             self._logger(
@@ -283,17 +285,17 @@ class MosquitoDB(object):
             return False
 
     def update(self, id, enabled, plugin, source, destination, update_alert, update_interval, description,
-               regex, regex_action, timestamp, counter, alert_timestamp, images_settings):
+               regex, regex_action, timestamp, counter, alert_timestamp, images_settings, url_tags):
 
         try:
             query = """UPDATE configuration SET enabled=?, plugin=?, source=?, destination=?, update_alert=?, 
                       update_interval=?, description=?, regexp=?, regexp_action=?, timestamp=?, counter=?,
-                       alert_timestamp=?, images_settings=? WHERE id=?;"""
+                       alert_timestamp=?, images_settings=?, url_tags=? WHERE id=?;"""
 
             conn = sqlite3.connect(self.db)
             conn.execute(query, [enabled, plugin, source, str(destination), update_alert, update_interval,
                                  description, str(regex), str(regex_action), timestamp, counter, alert_timestamp,
-                                 str(images_settings), id])
+                                 str(images_settings), str(url_tags), id])
             conn.commit()
 
             self._logger(
