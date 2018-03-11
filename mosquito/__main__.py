@@ -988,7 +988,7 @@ class Mosquito(object):
                 try:
                     k, v = param.split(':', 1)
 
-                    if not re.fullmatch("[A-Za-z0-9_.~]+", k):
+                    if not re.fullmatch("[A-Za-z0-9-_.~]+", k):
                         raise Exception
 
                     tag = v.split("=")
