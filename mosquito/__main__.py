@@ -729,7 +729,7 @@ class Mosquito(object):
         parser_list = subparsers.add_parser('list', help=self.help.list1)
         parser_list.add_argument('--plugin', nargs='+', help=self.help.list2)
         parser_list.add_argument('--id', nargs='+', help=self.help.list3)
-        parser_list.add_argument('--short', action='store_true', help=self.help.list4)
+        parser_list.add_argument('--full', action='store_true', help=self.help.list4)
         parser_list.set_defaults(func=self.list)
 
         # Create 'set' parser
@@ -1127,14 +1127,14 @@ class Mosquito(object):
     def list(self, args):
         """ List configurations """
 
-        if args.short:
-            table = [[
-                'ID', 'Source', 'Destination', 'Regex', 'Regex Action', 'Images', 'URL Tags'
-            ]]
-        else:
+        if args.full:
             table = [[
                       'ID', 'Enabled', 'Plugin', 'Source', 'Destination', 'Alert', 'Interval', 'Desc', 'Regex',
                       'Regex Action', 'Images', 'URL Tags', 'Update', 'Count'
+            ]]
+        else:
+            table = [[
+                'ID', 'Source', 'Destination', 'Regex', 'Regex Action', 'Images', 'URL Tags'
             ]]
 
         configs = []
@@ -1161,17 +1161,7 @@ class Mosquito(object):
         if configs:
             for config in configs:
                 if len(config) > 0:
-                    if args.short:
-                        table.append([
-                            config[0],
-                            '\n'.join(wrap(str(config[3]))),
-                            '\n'.join(ast.literal_eval(config[4])),
-                            '\n'.join(ast.literal_eval(config[8])),
-                            '\n'.join(ast.literal_eval(config[9])),
-                            '\n'.join(ast.literal_eval(config[13])),
-                            '\n'.join(ast.literal_eval(config[14]))
-                        ])
-                    else:
+                    if args.full:
                         table.append([
                             config[0],
                             config[1],
@@ -1188,19 +1178,22 @@ class Mosquito(object):
                             datetime.fromtimestamp(int(config[10])),
                             config[11]
                         ])
+                    else:
+                        table.append([
+                            config[0],
+                            '\n'.join(wrap(str(config[3]))),
+                            '\n'.join(ast.literal_eval(config[4])),
+                            '\n'.join(ast.literal_eval(config[8])),
+                            '\n'.join(ast.literal_eval(config[9])),
+                            '\n'.join(ast.literal_eval(config[13])),
+                            '\n'.join(ast.literal_eval(config[14]))
+                        ])
 
         if len(table) > 1:
             table = AsciiTable(table)
             table.inner_row_border = True
 
-            if args.short:
-                table.justify_columns[0] = 'center'
-                table.justify_columns[1] = 'center'
-                table.justify_columns[2] = 'left'
-                table.justify_columns[3] = 'left'
-                table.justify_columns[4] = 'left'
-                table.justify_columns[5] = 'left'
-            else:
+            if args.full:
                 table.justify_columns[0] = 'center'
                 table.justify_columns[1] = 'center'
                 table.justify_columns[2] = 'center'
@@ -1215,6 +1208,13 @@ class Mosquito(object):
                 table.justify_columns[11] = 'left'
                 table.justify_columns[12] = 'center'
                 table.justify_columns[13] = 'center'
+            else:
+                table.justify_columns[0] = 'center'
+                table.justify_columns[1] = 'center'
+                table.justify_columns[2] = 'left'
+                table.justify_columns[3] = 'left'
+                table.justify_columns[4] = 'left'
+                table.justify_columns[5] = 'left'
 
             print(table.table)
         else:
