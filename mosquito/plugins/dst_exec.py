@@ -102,8 +102,9 @@ class MosquitoExec(object):
             for image in images:
                 image_data = image[0]
                 image_format = image[1]
+                image_name = image[2]
 
-                filename = working_path + "/images/" + str(images.index(image)) + "." + image_format.lower()
+                filename = working_path + "/images/" + image_name + "." + image_format.lower()
                 self._write(filename, image_data, "wb")
 
         try:

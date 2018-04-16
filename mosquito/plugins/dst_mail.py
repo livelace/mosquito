@@ -161,12 +161,13 @@ class MosquitoMail(object):
                     for image in images:
                         image_data = image[0]
                         image_format = image[1]
+                        image_name = image[2]
 
                         image = MIMEImage(image_data, image_format)
                         image.add_header(
                             'Content-Disposition',
                             'attachment',
-                            filename=self.settings.attachment_name + str(images.index(image)) + "." + image_format.lower())
+                            filename=self.settings.attachment_name + image_name + "." + image_format.lower())
                         msg.attach(image)
 
                 # Convert envelope to string

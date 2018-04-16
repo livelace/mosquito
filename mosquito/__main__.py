@@ -126,7 +126,8 @@ class MosquitoParallelFetching(object):
                                                 "debug",
                                                 "Image was matched: {}".format(link)
                                             ])
-                                            images.append([image_data.getvalue(), image.format])
+                                            image_name = link[link.rfind("/")+1:].split(".")[0]
+                                            images.append([image_data.getvalue(), image.format, image_name])
                             except:
                                 pass
 
@@ -451,37 +452,39 @@ class MosquitoParallelFetching(object):
                                     )
 
                                 elif k == "mail":
-                                    mail_headers = tags
-
+                                    # Transform subject
                                     if mail_subject:
-                                        mail_subject = mail_subject + " " + message_title.split("\n", 1)[0]
+                                        subject = mail_subject + " " + message_title.split("\n", 1)[0]
                                     else:
-                                        mail_subject = message_title.split("\n", 1)[0]
+                                        subject = message_title.split("\n", 1)[0]
 
-                                    if mail_subject:
-                                        if len(mail_subject) > self.settings.subject_length:
-                                            mail_subject = mail_subject[:self.settings.subject_length] + " ..."
+                                    if subject:
+                                        if len(subject) > self.settings.subject_length:
+                                            subject = subject[:self.settings.subject_length] + " ..."
 
                                     # Add default headers
-                                    mail_headers["X-mosquito-id"] = str(config_id)
-                                    mail_headers["X-mosquito-plugin"] = str(config_plugin)
-                                    mail_headers["X-mosquito-source"] = str(config_source)
-                                    mail_headers["X-mosquito-message-url"] = str(message_url)
+                                    headers = tags
+                                    headers["X-mosquito-id"] = str(config_id)
+                                    headers["X-mosquito-plugin"] = str(config_plugin)
+                                    headers["X-mosquito-source"] = str(config_source)
+                                    headers["X-mosquito-message-url"] = str(message_url)
 
                                     # Set email priority
                                     if mail_priority:
                                         if mail_priority == "high":
-                                            mail_priority = "1"
+                                            priority = "1"
                                         elif mail_priority == "normal":
-                                            mail_priority = "3"
+                                            priority = "3"
                                         elif mail_priority == "low":
-                                            mail_priority = "5"
+                                            priority = "5"
+                                    else:
+                                        priority = "3"
 
                                     # Append URL to mail body
-                                    mail_body = message_title + "\n\n---\n{}".format(message_url)
+                                    body = message_title + "\n\n---\n{}".format(message_url)
 
                                     if not mail.send(
-                                            v, mail_headers, mail_priority, mail_subject, mail_body, grabbed_html,
+                                            v, headers, priority, subject, body, grabbed_html,
                                             grabbed_screenshot, grabbed_text, grabbed_images
                                     ):
                                         queue.put([
@@ -491,7 +494,7 @@ class MosquitoParallelFetching(object):
                                         ])
 
                                         db.add_archive(
-                                            config_id, v, mail_headers, mail_priority, mail_subject, mail_body,
+                                            config_id, v, headers, priority, subject, body,
                                             grabbed_html, grabbed_screenshot, grabbed_text, current_timestamp
                                         )
 
@@ -750,11 +753,11 @@ class Mosquito(object):
 
         args = parser.parse_args()
 
-        #try:
-        args.func(args)
-        #except AttributeError:
-        #    parser.print_help()
-        #    sys.exit(0)
+        try:
+            args.func(args)
+        except AttributeError:
+            parser.print_help()
+            sys.exit(0)
 
     def _human_time(self, seconds):
         """ Convert seconds to human time """
@@ -780,7 +783,7 @@ class Mosquito(object):
         if isinstance(records, list):
             for record in records:
                 id = record[0]
-                destinations = ast.literal_eval(record[2])
+                destinations = record[2]
                 headers = ast.literal_eval(record[3])
                 priority = record[4]
                 subject = record[5]
