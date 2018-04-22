@@ -74,18 +74,26 @@ class MosquitoParallelFetching(object):
             image_min_height = 0
             image_max_width = 0
             image_max_height = 0
+            formats = []
 
             if params:
                 for param in params:
                     k, v = param.split(':')
-                    w, h = v.split('x')
 
                     if k == 'min':
+                        w, h = v.split('x')
+
                         image_min_width = int(w)
                         image_min_height = int(h)
-                    else:
+
+                    elif k == 'max':
+                        w, h = v.split('x')
+
                         image_max_width = int(w)
                         image_max_height = int(h)
+
+                    elif k == 'format':
+                        formats = v.split(',')
 
             with eventlet.Timeout(self.settings.grab_timeout):
                 try:
@@ -126,8 +134,24 @@ class MosquitoParallelFetching(object):
                                                 "debug",
                                                 "Image was matched: {}".format(link)
                                             ])
-                                            image_name = link[link.rfind("/")+1:].split(".")[0]
-                                            images.append([image_data.getvalue(), image.format, image_name])
+
+                                            # Get image format
+                                            image_format = image.format.lower()
+
+                                            # Derive image name from an URL
+                                            image_name = link[link.rfind("/") + 1:].split(".")[0]
+
+                                            if len(formats) > 0:
+                                                if image_format in formats:
+                                                    images.append([image_data.getvalue(), image_format, image_name])
+                                                else:
+                                                    queue.put([
+                                                        id,
+                                                        "warning",
+                                                        "Image format is not suitable: {}. Skipping.".format(image_format)
+                                                    ])
+                                            else:
+                                                images.append([image_data.getvalue(), image_format, image_name])
                             except:
                                 pass
 
@@ -968,19 +992,22 @@ class Mosquito(object):
             for param in params:
                 try:
                     k, v = param.split(':')
-                    w, h = v.split('x')
 
-                    if k not in ['min', 'max']:
-                        raise Exception
+                    if k == "min" or k == "max":
+                        w, h = v.split('x')
+                        int(w), int(h)
 
-                    int(w), int(h)
+                    elif k == "format":
+                        if not v:
+                            raise Exception
+
                 except:
                     status = False
 
         if status:
             return params
         else:
-            self.logger.error("There are no valid images size! Check your input and/or configuration file!")
+            self.logger.error("There are no valid images settings! Check your input and/or configuration file!")
             sys.exit(1)
 
     def _validate_url_tags(self, params):
