@@ -178,9 +178,9 @@ List configurations:
 +----+---------+--------+---------------------------+--------------------------------------+-------+----------+------+-------+------------------+-------------+-----------------------------------------+---------------------+-------+
 | ID | Enabled | Plugin | Source                    | Destination                          | Alert | Interval | Desc | Regex | Regex Action     | Images      | URL Tags                                |        Update       | Count |
 +----+---------+--------+---------------------------+--------------------------------------+-------+----------+------+-------+------------------+-------------+-----------------------------------------+---------------------+-------+
-| 13 |   True  |  rss   | http://tass.ru/rss/v2.xml | exec:/opt/toolset/mosquito_import.py |  7d   |   1s     | None |   .*  | grab=html        | min:600x300 | kultura:tag=tag1:culture                | 2018-04-16 09:19:57 |  3102 |
+| 13 |   True  |  rss   | http://tass.ru/rss/v2.xml | exec:/opt/toolset/mosquito_import.py |  7d   |   1s     | None |   .*  | grab=html        | min:600x300 | kultura:tag=tag1:culture                | 2018-04-19 09:18:09 |  3402 |
 |    |         |        |                           |                                      |       |          |      |       | grab=images      | max:800x600 | ekonomika:tag=tag1:economy              |                     |       |
-|    |         |        |                           |                                      |       |          |      |       | tag=lang:ru      |             | proisshestviya:tag=tag1:incidents       |                     |       |
+|    |         |        |                           |                                      |       |          |      |       | tag=lang:ru      | format:jpeg | proisshestviya:tag=tag1:incidents       |                     |       |
 |    |         |        |                           |                                      |       |          |      |       | tag=tag1:unknown |             | moskva:tag=tag1:moscow                  |                     |       |
 |    |         |        |                           |                                      |       |          |      |       |                  |             | politika:tag=tag1:politics              |                     |       |
 |    |         |        |                           |                                      |       |          |      |       |                  |             | v-strane:tag=tag1:russia                |                     |       |
@@ -190,5 +190,6 @@ List configurations:
 |    |         |        |                           |                                      |       |          |      |       |                  |             | kosmos:tag=tag1:technology              |                     |       |
 |    |         |        |                           |                                      |       |          |      |       |                  |             | mezhdunarodnaya-panorama:tag=tag1:world |                     |       |
 +----+---------+--------+---------------------------+--------------------------------------+-------+----------+------+-------+------------------+-------------+-----------------------------------------+---------------------+-------+
+
 ```
 
